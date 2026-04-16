@@ -91,11 +91,17 @@ input{
 
 td.lockedCell{background:#e6ffe6;}
 
+/* ★右寄せレイアウト */
 #middleRow,#bottomRow{
   margin-top:6px;
   display:flex;
   gap:6px;
   flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+#roundDeleteList{
+  min-width:120px;
 }
 </style>
 </head>
@@ -114,7 +120,9 @@ td.lockedCell{background:#e6ffe6;}
 </div>
 
 <div class="card">
-  <button onclick="addRound()">行追加</button>
+  <div style="display:flex; justify-content:flex-end;">
+    <button onclick="addRound()">行追加</button>
+  </div>
 
   <div id="middleRow">
     <select id="roundDeleteList"></select>
@@ -358,7 +366,8 @@ function renderTable(){
     const th=document.createElement("th");
     const inp=document.createElement("input");
     inp.value=p;
-    inp.oninput=e=>players[i]=e.target.value;
+    inp.readOnly = true;
+    inp.setAttribute("tabindex","-1");
     th.appendChild(inp);
     header.appendChild(th);
   });
@@ -373,6 +382,7 @@ function renderTable(){
       const inp=document.createElement("input");
 
       inp.value=(r.scores[i]===NOT_JOIN?"不参加":r.scores[i]);
+      inp.setAttribute("inputmode","numeric");
 
       if(r.locked){
         td.classList.add("lockedCell");
@@ -386,8 +396,6 @@ function renderTable(){
           saveState();
         };
       }
-
-      inp.setAttribute("inputmode","numeric");
 
       td.appendChild(inp);
       tr.appendChild(td);
@@ -417,6 +425,8 @@ function renderTable(){
     const inp=document.createElement("input");
 
     inp.value=chips[i]||"";
+    inp.setAttribute("inputmode","numeric");
+
     inp.onfocus=()=>handleChipAutoFill(i);
     inp.onclick=()=>handleChipAutoFill(i);
 
@@ -424,8 +434,6 @@ function renderTable(){
       chips[i]=e.target.value;
       saveState();
     };
-
-    inp.setAttribute("inputmode","numeric");
 
     td.appendChild(inp);
     chipRow.appendChild(td);
