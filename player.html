@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>プレイヤー設定</title>
+
+<style>
+/* そのまま（省略なしで使ってOK） */
+html,body{
+  height:100%;
+  margin:0;
+  font-family:sans-serif;
+  background:#f5f5f5;
+}
+
+body{
+  display:flex;
+  flex-direction:column;
+  padding:10px;
+  box-sizing:border-box;
+}
+
+h2{
+  margin:6px 0 8px;
+  font-size:22px;
+}
+
+.sectionTitle{
+  margin:6px 0 8px;
+  font-size:22px;
+  font-weight:bold;
+}
+
+#topButtons{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  margin-bottom:6px;
+}
+
+button{
+  font-size:20px;
+  min-height:48px;
+  padding:4px;
+  border:none;
+  border-radius:10px;
+  background:#e8f5e9;
+  color:#2e7d32;
+  box-shadow:0 2px 6px rgba(0,0,0,0.15);
+}
+
+#playerList{
+  flex:1;
+  overflow:auto;
+}
+
+.row{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  margin-bottom:6px;
+  padding:6px;
+  border-radius:10px;
+  background:#fff;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+.inputBox{
+  flex:1;
+  min-width:0;
+  height:48px;
+  font-size:20px;
+  border-radius:10px;
+  border:2px solid transparent;
+  padding:6px;
+  transition:0.2s;
+}
+
+.inputBox.focused{
+  border:2px solid #4CAF50;
+  box-shadow:0 0 6px rgba(76,175,80,0.6);
+}
+
+.inputBox.locked{
+  background:#e6ffe6;
+  pointer-events:none;
+}
+
+.smallBtn{
+  width:52px;
+  height:48px;
+  font-size:14px;
+  padding:0;
+  flex-shrink:0;
+}
+
+.danger{
+  background:#ffebee;
+  color:#d32f2f;
+}
+
+.checkBtn{
+  width:44px;
+  height:24px;
+  border-radius:20px;
+  background:#ddd;
+  position:relative;
+  flex-shrink:0;
+}
+
+.checkBtn::after{
+  content:"";
+  position:absolute;
+  top:2px;
+  left:2px;
+  width:20px;
+  height:20px;
+  background:#fff;
+  border-radius:50%;
+  transition:0.2s;
+}
+
+.checkBtn.active{
+  background:#4CAF50;
+}
+
+.checkBtn.active::after{
+  left:22px;
+}
+
+#chipRateInput{
+  width:33%;
+  height:48px;
+  font-size:20px;
+  border-radius:10px;
+  border:2px solid transparent;
+  padding:6px;
+}
+
+#bottomArea button{
+  width:100%;
+  margin-top:6px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>プレイヤー設定</h2>
+
+<div id="topButtons">
+  <button onclick="addPlayer()">名前追加</button>
+  <button onclick="resetChecks()">プレイヤーリセット</button>
+</div>
+
+<div id="playerList"></div>
+
+<hr>
+
+<div class="sectionTitle">チップレート</div>
+
+<input type="text" id="chipRateInput" placeholder="チップレート">
+
+<div id="bottomArea">
+  <button onclick="savePlayers()">保存</button>
+</div>
+
+<script>
+
+let players = [];
+let checks = [];
+let locks = [];
+
+window.onload = () => {
+
+  players = JSON.parse(localStorage.getItem("mahjongPlayers_draft") || "[]");
+  checks  = JSON.parse(localStorage.getItem("mahjongPlayerChecks_draft") || "[]");
+
+  /* ★追加：lock復元 */
+  locks = JSON.parse(localStorage.getItem("mahjongPlayerLocks") || "[]");
+
+  if(players.length === 0){
+    players = ["","","",""];
+    checks  = [false,false,false,false];
+  }
+
+  while(checks.length < players.length){
+    checks.push(false);
+  }
+
+  while(locks.length < players.length){
+    locks.push(false);
+  }
+
+  document.getElementById("chipRateInput").value =
+    localStorage.getItem("mahjongChipRate_draft") || "";
+
+  renderPlayers();
+  updateRegisteredPlayers();
+};
+
+function updateRegisteredPlayers(){
+  const selected = [];
+
+  players.forEach((p,i)=>{
+    const name = (p || "").trim();
+    if(checks[i] && name !== "") selected.push(name);
+  });
+
+  localStorage.setItem("mahjongPlayers", JSON.stringify(selected));
+}
+
+function renderPlayers(){
+  const div = document.getElementById("playerList");
+  div.innerHTML = "";
+
+  players.forEach((p,i)=>{
+
+    const row = document.createElement("div");
+    row.className = "row";
+
+    const inp = document.createElement("input");
+    inp.className = "inputBox" + (locks[i] ? " locked" : "");
+    inp.value = p;
+    inp.readOnly = locks[i];
+
+    inp.oninput = e => {
+      players[i] = e.target.value;
+      updateRegisteredPlayers();
+    };
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "smallBtn";
+    editBtn.textContent = locks[i] ? "編集" : "確定";
+
+    editBtn.onclick = ()=>{
+      locks[i] = !locks[i];
+
+      /* ★保存 */
+      localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
+
+      renderPlayers();
+    };
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "smallBtn danger";
+    delBtn.textContent = "削除";
+
+    delBtn.onclick = ()=>{
+      if(!confirm("削除しますか？")) return;
+      players.splice(i,1);
+      checks.splice(i,1);
+      locks.splice(i,1);
+
+      localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
+
+      updateRegisteredPlayers();
+      renderPlayers();
+    };
+
+    const chkBtn = document.createElement("div");
+    chkBtn.className = "checkBtn" + (checks[i] ? " active" : "");
+
+    chkBtn.onclick = ()=>{
+      checks[i] = !checks[i];
+      updateRegisteredPlayers();
+      renderPlayers();
+    };
+
+    row.appendChild(inp);
+    row.appendChild(editBtn);
+    row.appendChild(delBtn);
+    row.appendChild(chkBtn);
+
+    div.appendChild(row);
+  });
+}
+
+function focusLastInput(){
+  const inputs = document.querySelectorAll(".inputBox:not(.locked)");
+  if(inputs.length === 0) return;
+
+  const last = inputs[inputs.length - 1];
+  last.focus();
+  last.classList.add("focused");
+
+  setTimeout(()=>{
+    last.classList.remove("focused");
+  }, 800);
+}
+
+function addPlayer(){
+  players.push("");
+  checks.push(false);
+  locks.push(false);
+
+  renderPlayers();
+  setTimeout(focusLastInput, 0);
+}
+
+function resetChecks(){
+  if(!confirm("チェックを全て外しますか？")) return;
+  checks = checks.map(()=>false);
+  updateRegisteredPlayers();
+  renderPlayers();
+}
+
+function savePlayers(){
+  localStorage.setItem("mahjongPlayers_draft", JSON.stringify(players));
+  localStorage.setItem("mahjongPlayerChecks_draft", JSON.stringify(checks));
+  localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
+
+  const rate = document.getElementById("chipRateInput").value.trim();
+  localStorage.setItem("mahjongChipRate_draft", rate);
+
+  window.location.href = "index.html";
+}
+
+</script>
+</body>
+</html>

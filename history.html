@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>履歴</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  font-size:20px;
+  font-family:sans-serif;
+  background:#f5f5f5;
+  padding:10px;
+}
+
+.header{
+  display:flex;
+  align-items:center;
+  margin-bottom:6px;
+}
+
+.header h2{font-size:22px;}
+
+#topRight{margin-left:auto;}
+
+button{
+  font-size:20px;
+  min-height:48px;
+  padding:4px;
+  border:none;
+  border-radius:10px;
+  background:#e8f5e9;
+  color:#2e7d32;
+  box-shadow:0 2px 6px rgba(0,0,0,0.15);
+}
+
+button:active{transform:scale(0.96);}
+
+.deleteBtn{
+  background:#ffebee;
+  color:#d32f2f;
+  margin-bottom:6px;
+}
+
+.historyCard{
+  background:#fff;
+  border-radius:10px;
+  padding:6px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+  margin-bottom:10px;
+}
+
+table{
+  width:100%;
+  table-layout:fixed;
+  border-collapse:separate;
+  border-spacing:0;
+}
+
+td{
+  border-right:2px solid #000;
+  border-bottom:2px solid #000;
+  text-align:center;
+  height:60px;
+  font-size:20px;
+}
+
+tr:first-child td{border-top:2px solid #000;}
+td:first-child{border-left:2px solid #000;}
+
+.dateRow{
+  background:#fafafa;
+  font-weight:bold;
+}
+
+.empty{
+  text-align:center;
+  padding:40px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <h2>履歴一覧</h2>
+  <div id="topRight">
+    <button onclick="goBack()">点数表に戻る</button>
+  </div>
+</div>
+
+<div id="history"></div>
+
+<script>
+
+function goBack(){
+  window.location.href = "index.html";
+}
+
+function renderHistory(){
+  const list = JSON.parse(localStorage.getItem("mahjongHistory") || "[]");
+  const div = document.getElementById("history");
+
+  div.innerHTML = "";
+
+  if(list.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.innerText = "履歴がありません";
+    div.appendChild(empty);
+    return;
+  }
+
+  list.forEach((h, index) => {
+
+    const card = document.createElement("div");
+    card.className = "historyCard";
+
+    const delBtn = document.createElement("button");
+    delBtn.innerText = "この履歴を削除";
+    delBtn.className = "deleteBtn";
+
+    delBtn.onclick = () => {
+      if(!confirm("この履歴を削除しますか？")) return;
+
+      let history = JSON.parse(localStorage.getItem("mahjongHistory") || "[]");
+      history.splice(index,1);
+      localStorage.setItem("mahjongHistory", JSON.stringify(history));
+
+      renderHistory();
+    };
+
+    card.appendChild(delBtn);
+
+    const table = document.createElement("table");
+
+    const dateRow = document.createElement("tr");
+    const dateTd = document.createElement("td");
+    dateTd.colSpan = (h.players?.length || 0) + 1;
+    dateTd.innerText = h.date || "日時不明";
+    dateRow.className = "dateRow";
+    dateRow.appendChild(dateTd);
+    table.appendChild(dateRow);
+
+    if(h.players){
+      const nameRow = document.createElement("tr");
+
+      const blank = document.createElement("td");
+      blank.innerText = "";
+      nameRow.appendChild(blank);
+
+      h.players.forEach(p=>{
+        const td = document.createElement("td");
+        td.innerText = p;
+        nameRow.appendChild(td);
+      });
+
+      table.appendChild(nameRow);
+    }
+
+    if(h.totals){
+      const row = document.createElement("tr");
+
+      const label = document.createElement("td");
+      label.innerText = "合計";
+      row.appendChild(label);
+
+      h.totals.forEach(v=>{
+        const td = document.createElement("td");
+        td.innerText = v;
+        row.appendChild(td);
+      });
+
+      table.appendChild(row);
+    }
+
+    if(h.chips){
+      const row = document.createElement("tr");
+
+      const label = document.createElement("td");
+      label.innerText = "チップ";
+      row.appendChild(label);
+
+      h.chips.forEach(v=>{
+        const td = document.createElement("td");
+        td.innerText = (v===0)?"±0":v;
+        row.appendChild(td);
+      });
+
+      table.appendChild(row);
+    }
+
+    if(h.results){
+      const row = document.createElement("tr");
+
+      const label = document.createElement("td");
+      label.innerText = "結果";
+      row.appendChild(label);
+
+      h.results.forEach(v=>{
+        const td = document.createElement("td");
+        td.innerText = v;
+        row.appendChild(td);
+      });
+
+      table.appendChild(row);
+    }
+
+    card.appendChild(table);
+    div.appendChild(card);
+  });
+}
+
+window.onload = renderHistory;
+
+</script>
+</body>
+</html>
