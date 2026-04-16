@@ -89,19 +89,27 @@ input{
   text-align:center;
 }
 
-td.lockedCell{background:#e6ffe6;}
-
-/* ★右寄せレイアウト */
-#middleRow,#bottomRow{
-  margin-top:6px;
-  display:flex;
-  gap:6px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
+.nameLocked{
+  background:#eee;
+  pointer-events:none;
 }
 
-#roundDeleteList{
-  min-width:120px;
+td.lockedCell{background:#e6ffe6;}
+
+/* レイアウト */
+.rowLine{
+  display:flex;
+  align-items:center;
+  margin-top:6px;
+  gap:6px;
+}
+
+.left{justify-content:flex-start;}
+.right{justify-content:flex-end;}
+
+select{
+  font-size:20px;
+  min-height:48px;
 }
 </style>
 </head>
@@ -120,20 +128,25 @@ td.lockedCell{background:#e6ffe6;}
 </div>
 
 <div class="card">
-  <div style="display:flex; justify-content:flex-end;">
+
+  <div class="rowLine left">
     <button onclick="addRound()">行追加</button>
   </div>
 
-  <div id="middleRow">
+  <div class="rowLine right">
     <select id="roundDeleteList"></select>
     <button onclick="deleteSelectedRound()">選択行削除</button>
+  </div>
+
+  <div class="rowLine right">
+    <button onclick="resetRounds()">行リセット</button>
     <button onclick="resetChips()">チップリセット</button>
   </div>
 
-  <div id="bottomRow">
-    <button onclick="resetRounds()">行リセット</button>
+  <div class="rowLine right">
     <button class="danger" onclick="resetAll()">オールリセット</button>
   </div>
+
 </div>
 
 <script>
@@ -366,8 +379,8 @@ function renderTable(){
     const th=document.createElement("th");
     const inp=document.createElement("input");
     inp.value=p;
-    inp.readOnly = true;
-    inp.setAttribute("tabindex","-1");
+    inp.readOnly=true;
+    inp.classList.add("nameLocked");
     th.appendChild(inp);
     header.appendChild(th);
   });
