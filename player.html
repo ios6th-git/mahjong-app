@@ -6,7 +6,6 @@
 <title>プレイヤー設定</title>
 
 <style>
-/* そのまま（省略なしで使ってOK） */
 html,body{
   height:100%;
   margin:0;
@@ -138,6 +137,11 @@ button{
   padding:6px;
 }
 
+/* ★ テンキー化 */
+#chipRateInput{
+  inputmode: numeric;
+}
+
 #bottomArea button{
   width:100%;
   margin-top:6px;
@@ -160,7 +164,8 @@ button{
 
 <div class="sectionTitle">チップレート</div>
 
-<input type="text" id="chipRateInput" placeholder="チップレート">
+<!-- ★ここだけ変更 -->
+<input type="text" id="chipRateInput" placeholder="チップレート" inputmode="numeric">
 
 <div id="bottomArea">
   <button onclick="savePlayers()">保存</button>
@@ -176,8 +181,6 @@ window.onload = () => {
 
   players = JSON.parse(localStorage.getItem("mahjongPlayers_draft") || "[]");
   checks  = JSON.parse(localStorage.getItem("mahjongPlayerChecks_draft") || "[]");
-
-  /* ★追加：lock復元 */
   locks = JSON.parse(localStorage.getItem("mahjongPlayerLocks") || "[]");
 
   if(players.length === 0){
@@ -236,10 +239,7 @@ function renderPlayers(){
 
     editBtn.onclick = ()=>{
       locks[i] = !locks[i];
-
-      /* ★保存 */
       localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
-
       renderPlayers();
     };
 
