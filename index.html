@@ -55,6 +55,9 @@ table{
   table-layout:fixed;
   border-collapse:separate;
   border-spacing:0;
+
+  /* ★スクロール安定 */
+  position:relative;
 }
 
 th,td{
@@ -68,17 +71,20 @@ th:first-child,td:first-child{border-left:2px solid #000;}
 
 #table th,#table td{height:60px;}
 
+/* ★ヘッダー強化（消えないように） */
 th{
   position:sticky;
   top:0;
   background:#fff;
-  z-index:2;
+  z-index:100;
+  transform:translateZ(0); /* ←重要 */
 }
 
 td:first-child{
   position:sticky;
   left:0;
   background:#fff;
+  z-index:50;
 }
 
 input{
@@ -95,6 +101,11 @@ input{
 }
 
 td.lockedCell{background:#e6ffe6;}
+
+/* ★1位（ロック行） */
+.rank1 input{
+  background:#ffcccc;
+}
 
 /* レイアウト */
 .rowLine{
@@ -390,6 +401,15 @@ function renderTable(){
     const tr=document.createElement("tr");
     tr.appendChild(Object.assign(document.createElement("td"),{innerText:ri+1}));
 
+    // ★1位判定（UIのみ）
+    let max = -Infinity;
+    r.scores.forEach(v=>{
+      if(v!=="" && v!==NOT_JOIN){
+        const n = Number(v);
+        if(!isNaN(n)) max = Math.max(max,n);
+      }
+    });
+
     players.forEach((_,i)=>{
       const td=document.createElement("td");
       const inp=document.createElement("input");
@@ -400,6 +420,12 @@ function renderTable(){
       if(r.locked){
         td.classList.add("lockedCell");
         inp.disabled=true;
+
+        // ★1位だけ赤
+        if(Number(r.scores[i]) === max){
+          td.classList.add("rank1");
+        }
+
       }else{
         inp.onfocus=()=>handleAutoFill(ri,i);
         inp.onclick=()=>handleAutoFill(ri,i);
