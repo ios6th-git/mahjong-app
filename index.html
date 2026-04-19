@@ -14,12 +14,15 @@ body{
   background:#f5f5f5;
 }
 
+/* ===== 上固定（触らない） ===== */
 #topFixed{
   position:fixed;
   top:0;
+  left:0;
   width:100%;
   background:#fff;
   z-index:1000;
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
 }
 
 #playerButtons{
@@ -31,14 +34,18 @@ body{
 
 button{
   font-size:20px;
-  padding:6px;
+  min-height:48px;
+  padding:4px 10px;
   border:none;
   border-radius:10px;
   background:#e8f5e9;
+  color:#2e7d32;
 }
 
-.danger{background:#ffebee;}
+button:active{transform:scale(0.96);}
+.danger{background:#ffebee;color:#d32f2f;}
 
+/* ===== テーブル ===== */
 #wrap{
   margin-top:150px;
   height:70vh;
@@ -51,12 +58,13 @@ table{
   table-layout:fixed;
 }
 
-th,td{
+th, td{
   border:2px solid #000;
   height:60px;
   text-align:center;
 }
 
+/* ヘッダー固定 */
 thead th{
   position:sticky;
   top:0;
@@ -64,7 +72,8 @@ thead th{
   z-index:5;
 }
 
-td:first-child,th:first-child{
+/* 左固定 */
+td:first-child, th:first-child{
   position:sticky;
   left:0;
   background:#fff;
@@ -76,7 +85,10 @@ input{
   height:100%;
   border:none;
   text-align:center;
+  font-size:20px;
 }
+
+.nameInput{font-weight:bold;}
 
 .locked{background:#e6ffe6;}
 .rank1 input{background:#ffcccc;}
@@ -85,6 +97,23 @@ input{
   background:#eee;
   font-weight:bold;
 }
+
+/* ===== 下ボタン（触らない） ===== */
+.card{
+  background:#fff;
+  border-radius:10px;
+  padding:6px;
+  margin:10px;
+}
+
+.rowLine{
+  display:flex;
+  margin-top:6px;
+  gap:6px;
+}
+
+.left{justify-content:flex-start;}
+.right{justify-content:flex-end;}
 </style>
 </head>
 
@@ -92,8 +121,9 @@ input{
 
 <div id="topFixed">
   <div id="playerButtons">
-    <button onclick="addRound()">行追加</button>
-    <button onclick="resetAll()" class="danger">リセット</button>
+    <button onclick="goSetting()">設定</button>
+    <button onclick="saveHistory()">履歴保存</button>
+    <button onclick="goHistory()">履歴</button>
   </div>
 </div>
 
@@ -101,8 +131,28 @@ input{
   <table id="table"></table>
 </div>
 
+<div class="card">
+  <div class="rowLine left">
+    <button onclick="addRound()">行追加</button>
+  </div>
+
+  <div class="rowLine right">
+    <select id="roundDeleteList"></select>
+    <button onclick="deleteSelectedRound()">選択行削除</button>
+  </div>
+
+  <div class="rowLine right">
+    <button onclick="resetRounds()">行リセット</button>
+    <button onclick="resetChips()">チップリセット</button>
+  </div>
+
+  <div class="rowLine right">
+    <button class="danger" onclick="resetAll()">オールリセット</button>
+  </div>
+</div>
+
 <script>
-const KEYS={
+const STORAGE_KEYS={
   PLAYERS:"mahjongPlayers",
   CHECKS:"mahjongPlayerChecks_draft",
   ROUNDS:"mahjongRounds"
@@ -111,17 +161,30 @@ const KEYS={
 let players=[];
 let checks=[];
 let rounds=[];
+let activeIndex=[];
 
+/* ===== 読込 ===== */
 function load(){
-  players=JSON.parse(localStorage.getItem(KEYS.PLAYERS)||'["A","B","C","D"]');
-  checks=JSON.parse(localStorage.getItem(KEYS.CHECKS)||"[true,true,true,true]");
-  rounds=JSON.parse(localStorage.getItem(KEYS.ROUNDS)||"[]");
+  players=JSON.parse(localStorage.getItem(STORAGE_KEYS.PLAYERS)||'["","","",""]');
+  checks=JSON.parse(localStorage.getItem(STORAGE_KEYS.CHECKS)||'[true,true,true,true]');
+  rounds=JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUNDS)||"[]");
+
+  activeIndex=[];
+  checks.forEach((v,i)=>{
+    if(v) activeIndex.push(i);
+  });
 }
 
-function save(){
-  localStorage.setItem(KEYS.ROUNDS,JSON.stringify(rounds));
+/* ===== 保存 ===== */
+function savePlayers(){
+  localStorage.setItem(STORAGE_KEYS.PLAYERS,JSON.stringify(players));
 }
 
+function saveRounds(){
+  localStorage.setItem(STORAGE_KEYS.ROUNDS,JSON.stringify(rounds));
+}
+
+/* ===== 初期 ===== */
 window.onload=()=>{
   load();
   if(rounds.length===0)addRound();
@@ -133,15 +196,24 @@ function render(){
   const table=document.getElementById("table");
   table.innerHTML="";
 
-  const activeIndex = players.map((p,i)=>checks[i]?i:null).filter(i=>i!==null);
-
   const thead=document.createElement("thead");
   const trh=document.createElement("tr");
+
   trh.appendChild(document.createElement("th"));
 
   activeIndex.forEach(i=>{
     const th=document.createElement("th");
-    th.textContent=players[i];
+    const inp=document.createElement("input");
+
+    inp.value=players[i];
+    inp.className="nameInput";
+
+    inp.oninput=e=>{
+      players[i]=e.target.value;
+      savePlayers();
+    };
+
+    th.appendChild(inp);
     trh.appendChild(th);
   });
 
@@ -153,14 +225,10 @@ function render(){
   rounds.forEach((r,ri)=>{
     const tr=document.createElement("tr");
 
-    tr.appendChild(Object.assign(document.createElement("td"),{textContent:ri+1}));
+    tr.appendChild(Object.assign(document.createElement("td"),{innerText:ri+1}));
 
-    let nums=activeIndex.map(i=>{
-      const n=Number(r.scores[i]);
-      return isNaN(n)?null:n;
-    });
-
-    let max=Math.max(...nums.filter(n=>n!==null));
+    let nums=activeIndex.map(i=>Number(r.scores[i]));
+    let max=Math.max(...nums.filter(n=>!isNaN(n)));
 
     activeIndex.forEach(i=>{
       const td=document.createElement("td");
@@ -178,11 +246,11 @@ function render(){
 
       inp.value=r.scores[i]||"";
 
-      inp.onfocus=()=>autoFill(ri,i,activeIndex);
+      inp.onfocus=()=>autoFill(ri,i);
 
       inp.oninput=e=>{
         r.scores[i]=e.target.value;
-        save();
+        saveRounds();
       };
 
       td.appendChild(inp);
@@ -192,10 +260,11 @@ function render(){
     tbody.appendChild(tr);
   });
 
-  /* ===== 合計 ===== */
-  const totalTr=document.createElement("tr");
-  totalTr.className="totalRow";
-  totalTr.appendChild(Object.assign(document.createElement("td"),{textContent:"合計"}));
+  /* ===== 合計行 ===== */
+  const total=document.createElement("tr");
+  total.className="totalRow";
+
+  total.appendChild(Object.assign(document.createElement("td"),{innerText:"合計"}));
 
   activeIndex.forEach(i=>{
     let sum=0;
@@ -203,35 +272,37 @@ function render(){
       const n=Number(r.scores[i]);
       if(!isNaN(n)) sum+=n;
     });
-    totalTr.appendChild(Object.assign(document.createElement("td"),{textContent:sum}));
+    total.appendChild(Object.assign(document.createElement("td"),{innerText:sum}));
   });
 
-  tbody.appendChild(totalTr);
+  tbody.appendChild(total);
+
   table.appendChild(tbody);
+  updateSelect();
 }
 
 /* ===== 自動計算 ===== */
-function autoFill(ri,i,active){
+function autoFill(ri,i){
   const r=rounds[ri];
   if(r.locked)return;
 
-  let nums=active.map(idx=>{
+  let nums=activeIndex.map(idx=>{
     const n=Number(r.scores[idx]);
     return isNaN(n)?null:n;
   });
 
   let filled=nums.filter(n=>n!==null).length;
 
-  if(filled===3){
+  if(filled===3 && (r.scores[i]===""||r.scores[i]==null)){
     const sum=nums.reduce((a,b)=>a+(b||0),0);
     r.scores[i]=-sum;
 
-    active.forEach(idx=>{
+    activeIndex.forEach(idx=>{
       if(r.scores[idx]==="") r.scores[idx]="不参加";
     });
 
     r.locked=true;
-    save();
+    saveRounds();
     render();
   }
 }
@@ -239,16 +310,54 @@ function autoFill(ri,i,active){
 /* ===== 操作 ===== */
 function addRound(){
   rounds.push({scores:Array(players.length).fill(""),locked:false});
-  save();
+  saveRounds();
   render();
 }
 
+function deleteSelectedRound(){
+  const i=Number(roundDeleteList.value);
+  if(!confirm("削除？"))return;
+  rounds.splice(i,1);
+  saveRounds();
+  render();
+}
+
+function resetRounds(){
+  if(!confirm("行リセット？"))return;
+  rounds.forEach(r=>{
+    r.scores=Array(players.length).fill("");
+    r.locked=false;
+  });
+  saveRounds();
+  render();
+}
+
+function resetChips(){
+  alert("チップ未実装");
+}
+
 function resetAll(){
-  if(!confirm("リセット？"))return;
-  localStorage.removeItem(KEYS.ROUNDS);
+  if(!confirm("点数リセット？"))return;
+  localStorage.removeItem(STORAGE_KEYS.ROUNDS);
   rounds=[];
   addRound();
 }
+
+function updateSelect(){
+  const sel=document.getElementById("roundDeleteList");
+  sel.innerHTML="";
+  rounds.forEach((_,i)=>{
+    const op=document.createElement("option");
+    op.value=i;
+    op.textContent=(i+1)+"行目";
+    sel.appendChild(op);
+  });
+}
+
+/* ===== 遷移 ===== */
+function goSetting(){location.href="player.html";}
+function goHistory(){location.href="history.html";}
+function saveHistory(){alert("未実装");}
 </script>
 
 </body>
