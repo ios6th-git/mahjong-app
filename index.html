@@ -13,17 +13,26 @@ body{
   font-family:sans-serif;
   background:#f5f5f5;
   padding:10px;
-  padding-top:110px;
+  padding-top:150px;
 }
 
-h3{margin:6px 0 8px;font-size:22px;}
-
-.card{
+/* ===== 上部固定エリア ===== */
+#topFixed{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  z-index:9999;
   background:#fff;
-  border-radius:10px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* ボタン */
+#playerButtons{
+  display:flex;
+  justify-content:flex-end;
+  gap:6px;
   padding:6px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1);
-  margin-bottom:10px;
 }
 
 button{
@@ -44,30 +53,45 @@ button:active{transform:scale(0.96);}
   color:#d32f2f;
 }
 
-#playerButtons{
-  display:flex;
-  justify-content:flex-end;
-  gap:6px;
-  margin-bottom:6px;
+/* ヘッダー */
+#fixedHeaderTitle{
+  font-size:22px;
+  font-weight:bold;
+  padding:4px 10px;
+}
+
+#fixedHeader table{
+  width:100%;
+  table-layout:fixed;
+  border-collapse:collapse;
+}
+
+#fixedHeader th{
+  height:60px;
+  border:2px solid #000;
+  background:#fff;
+}
+
+/* ===== テーブル ===== */
+.card{
+  background:#fff;
+  border-radius:10px;
+  padding:6px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+  margin-bottom:10px;
 }
 
 table{
   width:100%;
   table-layout:fixed;
-  border-collapse:separate;
-  border-spacing:0;
+  border-collapse:collapse;
 }
 
-th,td{
-  border-right:2px solid #000;
-  border-bottom:2px solid #000;
+td{
+  border:2px solid #000;
   text-align:center;
+  height:60px;
 }
-
-tr:first-child th{border-top:2px solid #000;}
-th:first-child,td:first-child{border-left:2px solid #000;}
-
-#table td{height:60px;}
 
 td:first-child{
   position:sticky;
@@ -84,49 +108,10 @@ input{
   text-align:center;
 }
 
-.nameLocked{
-  background:#eee;
-  pointer-events:none;
-}
-
 td.lockedCell{background:#e6ffe6;}
 
 .rank1 input{
   background:#ffcccc;
-}
-
-/* 固定ヘッダー */
-#fixedHeader{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  z-index:9999;
-  background:#fff;
-  box-shadow:0 2px 6px rgba(0,0,0,0.2);
-}
-
-#fixedHeaderTitle{
-  font-size:22px;
-  padding:6px 10px;
-}
-
-#fixedHeader table{
-  width:100%;
-  table-layout:fixed;
-  border-collapse:separate;
-  border-spacing:0;
-}
-
-#fixedHeader th{
-  height:60px;
-  border-right:2px solid #000;
-  border-bottom:2px solid #000;
-  background:#fff;
-}
-
-#fixedHeader th:first-child{
-  border-left:2px solid #000;
 }
 
 /* レイアウト */
@@ -149,19 +134,22 @@ select{
 
 <body>
 
-<div id="fixedHeader">
+<!-- ===== 固定エリア ===== -->
+<div id="topFixed">
+
+  <div id="playerButtons">
+    <button onclick="goSetting()">設定</button>
+    <button onclick="saveHistory()">履歴保存</button>
+    <button onclick="goHistory()">履歴</button>
+  </div>
+
   <div id="fixedHeaderTitle">点数表</div>
-  <div id="fixedHeaderTable"></div>
+  <div id="fixedHeader"></div>
+
 </div>
 
-<div id="playerButtons">
-  <button onclick="goSetting()">設定</button>
-  <button onclick="saveHistory()">履歴保存</button>
-  <button onclick="goHistory()">履歴</button>
-</div>
-
+<!-- ===== テーブル ===== -->
 <div class="card">
-  <h3>点数表</h3>
   <table id="table"></table>
 </div>
 
@@ -243,9 +231,9 @@ function goHistory(){
   window.location.href="history.html";
 }
 
-/* ===== ヘッダー ===== */
+/* ===== ヘッダー描画 ===== */
 function renderHeader(){
-  const wrap=document.getElementById("fixedHeaderTable");
+  const wrap=document.getElementById("fixedHeader");
   wrap.innerHTML="";
 
   const table=document.createElement("table");
@@ -266,14 +254,14 @@ function renderHeader(){
 /* ===== 自動スクロール ===== */
 function scrollToInput(el){
   const y = el.getBoundingClientRect().top + window.scrollY;
-  const offset = 130;
+  const offset = 160;
   window.scrollTo({
     top: y - offset,
     behavior: "smooth"
   });
 }
 
-/* ===== メイン描画 ===== */
+/* ===== 描画 ===== */
 function renderTable(){
   const table=document.getElementById("table");
   table.innerHTML="";
@@ -322,6 +310,17 @@ function renderTable(){
   });
 
   renderHeader();
+
+  const sel=document.getElementById("roundDeleteList");
+  sel.innerHTML="";
+  rounds.forEach((_,i)=>{
+    const op=document.createElement("option");
+    op.value=i;
+    op.textContent=(i+1)+"行目";
+    sel.appendChild(op);
+  });
+
+  if(rounds.length>0) sel.value=rounds.length-1;
 }
 
 /* ===== ロジック ===== */
