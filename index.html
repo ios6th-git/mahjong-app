@@ -55,8 +55,6 @@ table{
   table-layout:fixed;
   border-collapse:separate;
   border-spacing:0;
-
-  /* ★スクロール安定 */
   position:relative;
 }
 
@@ -71,13 +69,12 @@ th:first-child,td:first-child{border-left:2px solid #000;}
 
 #table th,#table td{height:60px;}
 
-/* ★ヘッダー強化（消えないように） */
 th{
   position:sticky;
   top:0;
   background:#fff;
   z-index:100;
-  transform:translateZ(0); /* ←重要 */
+  transform:translateZ(0);
 }
 
 td:first-child{
@@ -102,12 +99,39 @@ input{
 
 td.lockedCell{background:#e6ffe6;}
 
-/* ★1位（ロック行） */
 .rank1 input{
   background:#ffcccc;
 }
 
-/* レイアウト */
+/* ★完全固定ヘッダー */
+#fixedHeader{
+  position:fixed;
+  top:0;
+  left:10px;
+  right:10px;
+  z-index:9999;
+  background:#fff;
+  pointer-events:none;
+}
+
+#fixedHeader table{
+  width:100%;
+  table-layout:fixed;
+  border-collapse:separate;
+  border-spacing:0;
+}
+
+#fixedHeader th{
+  height:60px;
+  border-right:2px solid #000;
+  border-bottom:2px solid #000;
+  background:#fff;
+}
+
+#fixedHeader th:first-child{
+  border-left:2px solid #000;
+}
+
 .rowLine{
   display:flex;
   align-items:center;
@@ -126,6 +150,8 @@ select{
 </head>
 
 <body>
+
+<div id="fixedHeader"></div>
 
 <div id="playerButtons">
   <button onclick="goSetting()">設定</button>
@@ -401,7 +427,6 @@ function renderTable(){
     const tr=document.createElement("tr");
     tr.appendChild(Object.assign(document.createElement("td"),{innerText:ri+1}));
 
-    // ★1位判定（UIのみ）
     let max = -Infinity;
     r.scores.forEach(v=>{
       if(v!=="" && v!==NOT_JOIN){
@@ -421,7 +446,6 @@ function renderTable(){
         td.classList.add("lockedCell");
         inp.disabled=true;
 
-        // ★1位だけ赤
         if(Number(r.scores[i]) === max){
           td.classList.add("rank1");
         }
@@ -505,6 +529,30 @@ function renderTable(){
   if(rounds.length>0){
     sel.value=rounds.length-1;
   }
+
+  renderFixedHeader();
+}
+
+function renderFixedHeader(){
+  const table = document.getElementById("table");
+  const fixed = document.getElementById("fixedHeader");
+
+  fixed.innerHTML = "";
+
+  const firstRow = table.querySelector("tr");
+  if(!firstRow) return;
+
+  const cloneTable = document.createElement("table");
+  const tr = document.createElement("tr");
+
+  firstRow.querySelectorAll("th").forEach(th=>{
+    const newTh = document.createElement("th");
+    newTh.innerText = th.innerText;
+    tr.appendChild(newTh);
+  });
+
+  cloneTable.appendChild(tr);
+  fixed.appendChild(cloneTable);
 }
 
 </script>
