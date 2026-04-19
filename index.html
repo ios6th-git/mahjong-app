@@ -2,30 +2,29 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>麻雀点数管理</title>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 
 body{
-  font-size:20px;
   font-family:sans-serif;
+  font-size:18px;
   background:#f5f5f5;
-  padding:10px;
 }
 
-/* ===== 上部固定 ===== */
+/* ===== 固定ヘッダー ===== */
 #topFixed{
   position:fixed;
   top:0;
   left:0;
   width:100%;
-  z-index:9999;
   background:#fff;
-  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  z-index:1000;
 }
 
+/* ボタン */
 #playerButtons{
   display:flex;
   justify-content:flex-end;
@@ -34,87 +33,62 @@ body{
 }
 
 button{
-  font-size:20px;
-  min-height:48px;
-  padding:4px;
+  padding:6px;
   border:none;
-  border-radius:10px;
+  border-radius:8px;
   background:#e8f5e9;
-  color:#2e7d32;
 }
 
-button:active{transform:scale(0.96);}
+.danger{background:#ffebee;}
 
-.danger{
-  background:#ffebee;
-  color:#d32f2f;
+/* ===== テーブル ===== */
+#wrap{
+  margin-top:140px;
+  height:70vh;
+  overflow:auto;
 }
 
-/* ===== ヘッダー ===== */
-#fixedHeader{
-  overflow:hidden;
-}
-
-#fixedHeader table{
+table{
   border-collapse:collapse;
+  width:100%;
   table-layout:fixed;
-  margin:0 auto;
 }
 
-#fixedHeader th{
+th, td{
   border:2px solid #000;
-  height:60px;
+  height:55px;
+  text-align:center;
+}
+
+/* 上固定 */
+thead th{
+  position:sticky;
+  top:0;
+  background:#fff;
+  z-index:5;
   font-weight:bold;
 }
 
-/* ===== テーブル ===== */
-.card{
-  background:#fff;
-  border-radius:10px;
-  padding:6px;
-  margin-bottom:10px;
-}
-
-#table{
-  width:100%;
-  table-layout:fixed;
-  border-collapse:collapse;
-}
-
-td{
-  border:2px solid #000;
-  text-align:center;
-  height:60px;
-}
-
-td:first-child{
+/* 左固定 */
+td:first-child, th:first-child{
   position:sticky;
   left:0;
   background:#fff;
-  z-index:50;
+  z-index:6;
 }
 
+/* 入力 */
 input{
   width:100%;
   height:100%;
-  font-size:20px;
   border:none;
   text-align:center;
+  font-size:18px;
 }
 
-.totalRow{
-  background:#eee;
-  font-weight:bold;
-}
-
-.rowLine{
-  display:flex;
-  margin-top:6px;
-  gap:6px;
-}
-
-.left{justify-content:flex-start;}
-.right{justify-content:flex-end;}
+/* 状態 */
+.locked{background:#e6ffe6;}
+.rank1 input{background:#ffcccc;}
 </style>
 </head>
 
@@ -122,222 +96,143 @@ input{
 
 <div id="topFixed">
   <div id="playerButtons">
-    <button onclick="goSetting()">設定</button>
-    <button onclick="saveHistory()">履歴保存</button>
-    <button onclick="goHistory()">履歴</button>
-  </div>
-  <div id="fixedHeader"></div>
-</div>
-
-<div class="card">
-  <div id="tableWrap" style="overflow-y:auto;">
-    <table id="table"></table>
-  </div>
-</div>
-
-<div class="card">
-  <div class="rowLine left">
     <button onclick="addRound()">行追加</button>
+    <button onclick="resetAll()" class="danger">リセット</button>
   </div>
+</div>
 
-  <div class="rowLine right">
-    <select id="roundDeleteList"></select>
-    <button onclick="deleteSelectedRound()">選択行削除</button>
-  </div>
-
-  <div class="rowLine right">
-    <button onclick="resetRounds()">行リセット</button>
-    <button onclick="resetChips()">チップリセット</button>
-  </div>
-
-  <div class="rowLine right">
-    <button class="danger" onclick="resetAll()">オールリセット</button>
-  </div>
+<div id="wrap">
+  <table id="table"></table>
 </div>
 
 <script>
-/* ===== キー管理（安定化の核） ===== */
-const STORAGE_KEYS = {
-  PLAYERS: "mahjongPlayers",
-  CHECKS: "mahjongPlayerChecks_draft",
-  ROUNDS: "mahjongRounds",
-  CHIPS: "mahjongChips"
+const STORAGE_KEYS={
+  PLAYERS:"mahjongPlayers",
+  ROUNDS:"mahjongRounds"
 };
 
-/* ===== データ ===== */
 let players=[];
 let rounds=[];
-let chips=[];
 
-/* ===== 安全ラッパ ===== */
-function save(key, value){
-  localStorage.setItem(key, JSON.stringify(value));
+function save(){
+  localStorage.setItem(STORAGE_KEYS.ROUNDS,JSON.stringify(rounds));
 }
 
-function load(key, def){
-  return JSON.parse(localStorage.getItem(key) || JSON.stringify(def));
+function load(){
+  players=JSON.parse(localStorage.getItem(STORAGE_KEYS.PLAYERS)||'["A","B","C","D"]');
+  rounds=JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUNDS)||"[]");
 }
 
-/* ===== 初期化 ===== */
 window.onload=()=>{
-  players = load(STORAGE_KEYS.PLAYERS, ["","","",""]);
-  rounds  = load(STORAGE_KEYS.ROUNDS, []);
-  chips   = load(STORAGE_KEYS.CHIPS, Array(players.length).fill(""));
-
-  if(rounds.length===0) addRound();
-  renderTable();
+  load();
+  if(rounds.length===0)addRound();
+  render();
 };
 
-/* ===== ヘッダー ===== */
-function renderHeader(){
-  const wrap=document.getElementById("fixedHeader");
-  wrap.innerHTML="";
+/* ===== 描画 ===== */
+function render(){
+  const table=document.getElementById("table");
+  table.innerHTML="";
 
-  const table=document.createElement("table");
-  const tr=document.createElement("tr");
+  const thead=document.createElement("thead");
+  const trh=document.createElement("tr");
 
-  tr.appendChild(document.createElement("th"));
+  trh.appendChild(document.createElement("th"));
 
   players.forEach(p=>{
     const th=document.createElement("th");
     th.textContent=p;
-    tr.appendChild(th);
+    trh.appendChild(th);
   });
 
-  table.appendChild(tr);
-  wrap.appendChild(table);
-}
+  thead.appendChild(trh);
+  table.appendChild(thead);
 
-/* ===== 描画 ===== */
-function renderTable(){
-  const table=document.getElementById("table");
-  table.innerHTML="";
+  const tbody=document.createElement("tbody");
 
   rounds.forEach((r,ri)=>{
     const tr=document.createElement("tr");
-    tr.appendChild(Object.assign(document.createElement("td"),{innerText:ri+1}));
+
+    const idx=document.createElement("td");
+    idx.textContent=ri+1;
+    tr.appendChild(idx);
+
+    let nums=r.scores.map(v=>Number(v));
+    let max=Math.max(...nums.filter(n=>!isNaN(n)));
 
     players.forEach((_,i)=>{
       const td=document.createElement("td");
       const inp=document.createElement("input");
 
+      inp.setAttribute("inputmode","numeric");
+
+      if(r.locked){
+        td.classList.add("locked");
+        inp.disabled=true;
+        if(Number(r.scores[i])===max){
+          td.classList.add("rank1");
+        }
+      }
+
       inp.value=r.scores[i]||"";
+
+      inp.onfocus=()=>autoFill(ri,i);
+
       inp.oninput=e=>{
         r.scores[i]=e.target.value;
-        save(STORAGE_KEYS.ROUNDS, rounds);
+        save();
       };
 
       td.appendChild(inp);
       tr.appendChild(td);
     });
 
-    table.appendChild(tr);
+    tbody.appendChild(tr);
   });
 
-  /* 合計 */
-  const total=document.createElement("tr");
-  total.className="totalRow";
-  total.appendChild(Object.assign(document.createElement("td"),{innerText:"合計"}));
-
-  players.forEach((_,i)=>{
-    let sum=0;
-    rounds.forEach(r=>{
-      const n=Number(r.scores[i]);
-      if(!isNaN(n)) sum+=n;
-    });
-    total.appendChild(Object.assign(document.createElement("td"),{innerText:sum}));
-  });
-
-  table.appendChild(total);
-
-  renderHeader();
-  adjustLayout();
-  updateSelect();
+  table.appendChild(tbody);
 }
 
-/* ===== セレクト ===== */
-function updateSelect(){
-  const sel=document.getElementById("roundDeleteList");
-  sel.innerHTML="";
-  rounds.forEach((_,i)=>{
-    const op=document.createElement("option");
-    op.value=i;
-    op.textContent=(i+1)+"行目";
-    sel.appendChild(op);
+/* ===== 自動計算 ===== */
+function autoFill(ri,i){
+  const r=rounds[ri];
+  if(r.locked)return;
+
+  let nums=r.scores.map(v=>{
+    const n=Number(v);
+    return isNaN(n)?null:n;
   });
-}
 
-/* ===== レイアウト補正 ===== */
-function adjustLayout(){
-  const top=document.getElementById("topFixed");
-  document.body.style.paddingTop = top.offsetHeight + "px";
+  let filled=nums.filter(n=>n!==null).length;
 
-  const wrap=document.getElementById("tableWrap");
-  const header=document.querySelector("#fixedHeader table");
-  const main=document.getElementById("table");
+  if(filled===3 && nums[i]===null){
+    const sum=nums.reduce((a,b)=>a+(b||0),0);
+    r.scores[i]=-sum;
 
-  const scrollBar = wrap.offsetWidth - wrap.clientWidth;
+    /* 5人目以降 */
+    for(let k=0;k<players.length;k++){
+      if(r.scores[k]==="") r.scores[k]="不参加";
+    }
 
-  header.style.width = (main.offsetWidth - scrollBar) + "px";
-
-  const m=main.rows[0].cells;
-  const h=header.rows[0].cells;
-
-  for(let i=0;i<m.length;i++){
-    h[i].style.width = m[i].offsetWidth+"px";
+    r.locked=true;
+    save();
+    render();
   }
 }
 
 /* ===== 操作 ===== */
 function addRound(){
-  rounds.push({scores:Array(players.length).fill("")});
-  save(STORAGE_KEYS.ROUNDS, rounds);
-  renderTable();
+  rounds.push({scores:Array(players.length).fill(""),locked:false});
+  save();
+  render();
 }
 
-function deleteSelectedRound(){
-  const i=Number(roundDeleteList.value);
-  if(!confirm("削除？")) return;
-  rounds.splice(i,1);
-  save(STORAGE_KEYS.ROUNDS, rounds);
-  renderTable();
-}
-
-function resetRounds(){
-  if(!confirm("行リセット？")) return;
-
-  rounds.forEach(r=>{
-    r.scores=Array(players.length).fill("");
-  });
-
-  save(STORAGE_KEYS.ROUNDS, rounds);
-  renderTable();
-}
-
-function resetChips(){
-  if(!confirm("チップリセット？")) return;
-
-  chips = Array(players.length).fill("");
-  save(STORAGE_KEYS.CHIPS, chips);
-}
-
-/* 🔥 安全オールリセット */
 function resetAll(){
-  if(!confirm("点数のみ全リセット？")) return;
-
+  if(!confirm("点数リセット？"))return;
   localStorage.removeItem(STORAGE_KEYS.ROUNDS);
-  localStorage.removeItem(STORAGE_KEYS.CHIPS);
-
   rounds=[];
-  chips=Array(players.length).fill("");
-
   addRound();
 }
-
-/* ===== 遷移 ===== */
-function goSetting(){location.href="player.html";}
-function goHistory(){location.href="history.html";}
-function saveHistory(){alert("未実装");}
 </script>
 
 </body>
