@@ -52,14 +52,13 @@ button:active{transform:scale(0.96);}
 
 /* ===== ヘッダー ===== */
 #fixedHeader{
-  display:flex;
-  justify-content:center; /* ←中央揃え */
   overflow:hidden;
 }
 
 #fixedHeader table{
   border-collapse:collapse;
   table-layout:fixed;
+  margin:0 auto; /* ←これが核心（中央固定） */
 }
 
 #fixedHeader th{
@@ -136,7 +135,6 @@ input{
   </div>
 </div>
 
-<!-- ===== ボタン完全復活 ===== -->
 <div class="card">
 
   <div class="rowLine left">
@@ -295,7 +293,7 @@ function resetRounds(){
 }
 
 function resetChips(){
-  alert("チップは未実装");
+  alert("チップ未実装");
 }
 
 function resetAll(){
