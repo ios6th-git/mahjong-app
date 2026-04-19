@@ -14,18 +14,14 @@ body{
   background:#f5f5f5;
 }
 
-/* ===== 上固定 ===== */
 #topFixed{
   position:fixed;
   top:0;
-  left:0;
   width:100%;
   background:#fff;
   z-index:1000;
-  box-shadow:0 2px 6px rgba(0,0,0,0.2);
 }
 
-/* ボタン復元 */
 #playerButtons{
   display:flex;
   justify-content:flex-end;
@@ -35,20 +31,16 @@ body{
 
 button{
   font-size:20px;
-  min-height:48px;
-  padding:4px 10px;
+  padding:6px;
   border:none;
   border-radius:10px;
   background:#e8f5e9;
-  color:#2e7d32;
 }
 
-button:active{transform:scale(0.96);}
-.danger{background:#ffebee;color:#d32f2f;}
+.danger{background:#ffebee;}
 
-/* ===== テーブル ===== */
 #wrap{
-  margin-top:140px;
+  margin-top:150px;
   height:70vh;
   overflow:auto;
 }
@@ -59,114 +51,75 @@ table{
   table-layout:fixed;
 }
 
-th, td{
+th,td{
   border:2px solid #000;
   height:60px;
   text-align:center;
 }
 
-/* 上固定（重要） */
 thead th{
   position:sticky;
   top:0;
   background:#fff;
   z-index:5;
-  font-weight:bold;
 }
 
-/* 左固定 */
-td:first-child, th:first-child{
+td:first-child,th:first-child{
   position:sticky;
   left:0;
   background:#fff;
   z-index:6;
 }
 
-/* 入力 */
 input{
   width:100%;
   height:100%;
   border:none;
   text-align:center;
-  font-size:20px;
 }
 
-/* 状態 */
 .locked{background:#e6ffe6;}
 .rank1 input{background:#ffcccc;}
 
-/* ===== 下ボタン復元 ===== */
-.card{
-  background:#fff;
-  border-radius:10px;
-  padding:6px;
-  margin:10px;
+.totalRow{
+  background:#eee;
+  font-weight:bold;
 }
-
-.rowLine{
-  display:flex;
-  margin-top:6px;
-  gap:6px;
-}
-
-.left{justify-content:flex-start;}
-.right{justify-content:flex-end;}
 </style>
 </head>
 
 <body>
 
-<!-- ===== 上固定 ===== -->
 <div id="topFixed">
   <div id="playerButtons">
-    <button onclick="goSetting()">設定</button>
-    <button onclick="saveHistory()">履歴保存</button>
-    <button onclick="goHistory()">履歴</button>
+    <button onclick="addRound()">行追加</button>
+    <button onclick="resetAll()" class="danger">リセット</button>
   </div>
 </div>
 
-<!-- ===== テーブル ===== -->
 <div id="wrap">
   <table id="table"></table>
 </div>
 
-<!-- ===== 下ボタン完全復元 ===== -->
-<div class="card">
-  <div class="rowLine left">
-    <button onclick="addRound()">行追加</button>
-  </div>
-
-  <div class="rowLine right">
-    <select id="roundDeleteList"></select>
-    <button onclick="deleteSelectedRound()">選択行削除</button>
-  </div>
-
-  <div class="rowLine right">
-    <button onclick="resetRounds()">行リセット</button>
-    <button onclick="resetChips()">チップリセット</button>
-  </div>
-
-  <div class="rowLine right">
-    <button class="danger" onclick="resetAll()">オールリセット</button>
-  </div>
-</div>
-
 <script>
-const STORAGE_KEYS={
+const KEYS={
   PLAYERS:"mahjongPlayers",
+  CHECKS:"mahjongPlayerChecks_draft",
   ROUNDS:"mahjongRounds"
 };
 
 let players=[];
+let checks=[];
 let rounds=[];
 
-function save(){
-  localStorage.setItem(STORAGE_KEYS.ROUNDS,JSON.stringify(rounds));
+function load(){
+  players=JSON.parse(localStorage.getItem(KEYS.PLAYERS)||'["A","B","C","D"]');
+  checks=JSON.parse(localStorage.getItem(KEYS.CHECKS)||"[true,true,true,true]");
+  rounds=JSON.parse(localStorage.getItem(KEYS.ROUNDS)||"[]");
 }
 
-function load(){
-  players=JSON.parse(localStorage.getItem(STORAGE_KEYS.PLAYERS)||'["A","B","C","D"]');
-  rounds=JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUNDS)||"[]");
+function save(){
+  localStorage.setItem(KEYS.ROUNDS,JSON.stringify(rounds));
 }
 
 window.onload=()=>{
@@ -180,14 +133,15 @@ function render(){
   const table=document.getElementById("table");
   table.innerHTML="";
 
+  const activeIndex = players.map((p,i)=>checks[i]?i:null).filter(i=>i!==null);
+
   const thead=document.createElement("thead");
   const trh=document.createElement("tr");
-
   trh.appendChild(document.createElement("th"));
 
-  players.forEach(p=>{
+  activeIndex.forEach(i=>{
     const th=document.createElement("th");
-    th.textContent=p;
+    th.textContent=players[i];
     trh.appendChild(th);
   });
 
@@ -199,14 +153,16 @@ function render(){
   rounds.forEach((r,ri)=>{
     const tr=document.createElement("tr");
 
-    const idx=document.createElement("td");
-    idx.textContent=ri+1;
-    tr.appendChild(idx);
+    tr.appendChild(Object.assign(document.createElement("td"),{textContent:ri+1}));
 
-    let nums=r.scores.map(v=>Number(v));
-    let max=Math.max(...nums.filter(n=>!isNaN(n)));
+    let nums=activeIndex.map(i=>{
+      const n=Number(r.scores[i]);
+      return isNaN(n)?null:n;
+    });
 
-    players.forEach((_,i)=>{
+    let max=Math.max(...nums.filter(n=>n!==null));
+
+    activeIndex.forEach(i=>{
       const td=document.createElement("td");
       const inp=document.createElement("input");
 
@@ -222,7 +178,7 @@ function render(){
 
       inp.value=r.scores[i]||"";
 
-      inp.onfocus=()=>autoFill(ri,i);
+      inp.onfocus=()=>autoFill(ri,i,activeIndex);
 
       inp.oninput=e=>{
         r.scores[i]=e.target.value;
@@ -236,29 +192,43 @@ function render(){
     tbody.appendChild(tr);
   });
 
+  /* ===== 合計 ===== */
+  const totalTr=document.createElement("tr");
+  totalTr.className="totalRow";
+  totalTr.appendChild(Object.assign(document.createElement("td"),{textContent:"合計"}));
+
+  activeIndex.forEach(i=>{
+    let sum=0;
+    rounds.forEach(r=>{
+      const n=Number(r.scores[i]);
+      if(!isNaN(n)) sum+=n;
+    });
+    totalTr.appendChild(Object.assign(document.createElement("td"),{textContent:sum}));
+  });
+
+  tbody.appendChild(totalTr);
   table.appendChild(tbody);
-  updateSelect();
 }
 
 /* ===== 自動計算 ===== */
-function autoFill(ri,i){
+function autoFill(ri,i,active){
   const r=rounds[ri];
   if(r.locked)return;
 
-  let nums=r.scores.map(v=>{
-    const n=Number(v);
+  let nums=active.map(idx=>{
+    const n=Number(r.scores[idx]);
     return isNaN(n)?null:n;
   });
 
   let filled=nums.filter(n=>n!==null).length;
 
-  if(filled===3 && nums[i]===null){
+  if(filled===3){
     const sum=nums.reduce((a,b)=>a+(b||0),0);
     r.scores[i]=-sum;
 
-    for(let k=0;k<players.length;k++){
-      if(r.scores[k]==="") r.scores[k]="不参加";
-    }
+    active.forEach(idx=>{
+      if(r.scores[idx]==="") r.scores[idx]="不参加";
+    });
 
     r.locked=true;
     save();
@@ -273,50 +243,12 @@ function addRound(){
   render();
 }
 
-function deleteSelectedRound(){
-  const i=Number(roundDeleteList.value);
-  if(!confirm("削除？"))return;
-  rounds.splice(i,1);
-  save();
-  render();
-}
-
-function resetRounds(){
-  if(!confirm("行リセット？"))return;
-  rounds.forEach(r=>{
-    r.scores=Array(players.length).fill("");
-    r.locked=false;
-  });
-  save();
-  render();
-}
-
-function resetChips(){
-  alert("チップ未実装");
-}
-
 function resetAll(){
-  if(!confirm("点数リセット？"))return;
-  localStorage.removeItem(STORAGE_KEYS.ROUNDS);
+  if(!confirm("リセット？"))return;
+  localStorage.removeItem(KEYS.ROUNDS);
   rounds=[];
   addRound();
 }
-
-function updateSelect(){
-  const sel=document.getElementById("roundDeleteList");
-  sel.innerHTML="";
-  rounds.forEach((_,i)=>{
-    const op=document.createElement("option");
-    op.value=i;
-    op.textContent=(i+1)+"行目";
-    sel.appendChild(op);
-  });
-}
-
-/* ===== 遷移 ===== */
-function goSetting(){location.href="player.html";}
-function goHistory(){location.href="history.html";}
-function saveHistory(){alert("未実装");}
 </script>
 
 </body>
