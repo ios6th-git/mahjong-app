@@ -58,7 +58,7 @@ button:active{transform:scale(0.96);}
 #fixedHeader table{
   border-collapse:collapse;
   table-layout:fixed;
-  margin:0 auto; /* ←これが核心（中央固定） */
+  margin:0 auto;
 }
 
 #fixedHeader th{
@@ -136,7 +136,6 @@ input{
 </div>
 
 <div class="card">
-
   <div class="rowLine left">
     <button onclick="addRound()">行追加</button>
   </div>
@@ -154,17 +153,36 @@ input{
   <div class="rowLine right">
     <button class="danger" onclick="resetAll()">オールリセット</button>
   </div>
-
 </div>
 
 <script>
+/* ===== キー管理（安定化の核） ===== */
+const STORAGE_KEYS = {
+  PLAYERS: "mahjongPlayers",
+  CHECKS: "mahjongPlayerChecks_draft",
+  ROUNDS: "mahjongRounds",
+  CHIPS: "mahjongChips"
+};
+
+/* ===== データ ===== */
 let players=[];
 let rounds=[];
+let chips=[];
 
-/* ===== 初期 ===== */
+/* ===== 安全ラッパ ===== */
+function save(key, value){
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function load(key, def){
+  return JSON.parse(localStorage.getItem(key) || JSON.stringify(def));
+}
+
+/* ===== 初期化 ===== */
 window.onload=()=>{
-  players = JSON.parse(localStorage.getItem("mahjongPlayers")||'["","","",""]');
-  rounds = JSON.parse(localStorage.getItem("mahjongRounds")||"[]");
+  players = load(STORAGE_KEYS.PLAYERS, ["","","",""]);
+  rounds  = load(STORAGE_KEYS.ROUNDS, []);
+  chips   = load(STORAGE_KEYS.CHIPS, Array(players.length).fill(""));
 
   if(rounds.length===0) addRound();
   renderTable();
@@ -206,7 +224,7 @@ function renderTable(){
       inp.value=r.scores[i]||"";
       inp.oninput=e=>{
         r.scores[i]=e.target.value;
-        save();
+        save(STORAGE_KEYS.ROUNDS, rounds);
       };
 
       td.appendChild(inp);
@@ -237,7 +255,7 @@ function renderTable(){
   updateSelect();
 }
 
-/* ===== セレクト更新 ===== */
+/* ===== セレクト ===== */
 function updateSelect(){
   const sel=document.getElementById("roundDeleteList");
   sel.innerHTML="";
@@ -273,7 +291,7 @@ function adjustLayout(){
 /* ===== 操作 ===== */
 function addRound(){
   rounds.push({scores:Array(players.length).fill("")});
-  save();
+  save(STORAGE_KEYS.ROUNDS, rounds);
   renderTable();
 }
 
@@ -281,29 +299,39 @@ function deleteSelectedRound(){
   const i=Number(roundDeleteList.value);
   if(!confirm("削除？")) return;
   rounds.splice(i,1);
-  save();
+  save(STORAGE_KEYS.ROUNDS, rounds);
   renderTable();
 }
 
 function resetRounds(){
   if(!confirm("行リセット？")) return;
-  rounds.forEach(r=>r.scores=Array(players.length).fill(""));
-  save();
+
+  rounds.forEach(r=>{
+    r.scores=Array(players.length).fill("");
+  });
+
+  save(STORAGE_KEYS.ROUNDS, rounds);
   renderTable();
 }
 
 function resetChips(){
-  alert("チップ未実装");
+  if(!confirm("チップリセット？")) return;
+
+  chips = Array(players.length).fill("");
+  save(STORAGE_KEYS.CHIPS, chips);
 }
 
+/* 🔥 安全オールリセット */
 function resetAll(){
-  if(!confirm("全リセット？")) return;
-  localStorage.clear();
-  location.reload();
-}
+  if(!confirm("点数のみ全リセット？")) return;
 
-function save(){
-  localStorage.setItem("mahjongRounds", JSON.stringify(rounds));
+  localStorage.removeItem(STORAGE_KEYS.ROUNDS);
+  localStorage.removeItem(STORAGE_KEYS.CHIPS);
+
+  rounds=[];
+  chips=Array(players.length).fill("");
+
+  addRound();
 }
 
 /* ===== 遷移 ===== */
