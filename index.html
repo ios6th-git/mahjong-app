@@ -52,6 +52,8 @@ button:active{transform:scale(0.96);}
 
 /* ===== ヘッダー ===== */
 #fixedHeader{
+  display:flex;
+  justify-content:center; /* ←中央揃え */
   overflow:hidden;
 }
 
@@ -134,9 +136,30 @@ input{
   </div>
 </div>
 
-<script>
-const NOT_JOIN="__NO__";
+<!-- ===== ボタン完全復活 ===== -->
+<div class="card">
 
+  <div class="rowLine left">
+    <button onclick="addRound()">行追加</button>
+  </div>
+
+  <div class="rowLine right">
+    <select id="roundDeleteList"></select>
+    <button onclick="deleteSelectedRound()">選択行削除</button>
+  </div>
+
+  <div class="rowLine right">
+    <button onclick="resetRounds()">行リセット</button>
+    <button onclick="resetChips()">チップリセット</button>
+  </div>
+
+  <div class="rowLine right">
+    <button class="danger" onclick="resetAll()">オールリセット</button>
+  </div>
+
+</div>
+
+<script>
 let players=[];
 let rounds=[];
 
@@ -213,29 +236,39 @@ function renderTable(){
 
   renderHeader();
   adjustLayout();
+  updateSelect();
 }
 
-/* ===== レイアウト補正（核心） ===== */
+/* ===== セレクト更新 ===== */
+function updateSelect(){
+  const sel=document.getElementById("roundDeleteList");
+  sel.innerHTML="";
+  rounds.forEach((_,i)=>{
+    const op=document.createElement("option");
+    op.value=i;
+    op.textContent=(i+1)+"行目";
+    sel.appendChild(op);
+  });
+}
+
+/* ===== レイアウト補正 ===== */
 function adjustLayout(){
   const top=document.getElementById("topFixed");
   document.body.style.paddingTop = top.offsetHeight + "px";
 
-  const tableWrap=document.getElementById("tableWrap");
-  const headerTable=document.querySelector("#fixedHeader table");
-  const mainTable=document.getElementById("table");
+  const wrap=document.getElementById("tableWrap");
+  const header=document.querySelector("#fixedHeader table");
+  const main=document.getElementById("table");
 
-  // スクロールバー幅
-  const scrollBar = tableWrap.offsetWidth - tableWrap.clientWidth;
+  const scrollBar = wrap.offsetWidth - wrap.clientWidth;
 
-  // ヘッダー幅を縮める
-  headerTable.style.width = (mainTable.offsetWidth - scrollBar) + "px";
+  header.style.width = (main.offsetWidth - scrollBar) + "px";
 
-  // 列幅同期
-  const m = mainTable.rows[0].cells;
-  const h = headerTable.rows[0].cells;
+  const m=main.rows[0].cells;
+  const h=header.rows[0].cells;
 
   for(let i=0;i<m.length;i++){
-    h[i].style.width = m[i].offsetWidth + "px";
+    h[i].style.width = m[i].offsetWidth+"px";
   }
 }
 
@@ -244,6 +277,31 @@ function addRound(){
   rounds.push({scores:Array(players.length).fill("")});
   save();
   renderTable();
+}
+
+function deleteSelectedRound(){
+  const i=Number(roundDeleteList.value);
+  if(!confirm("削除？")) return;
+  rounds.splice(i,1);
+  save();
+  renderTable();
+}
+
+function resetRounds(){
+  if(!confirm("行リセット？")) return;
+  rounds.forEach(r=>r.scores=Array(players.length).fill(""));
+  save();
+  renderTable();
+}
+
+function resetChips(){
+  alert("チップは未実装");
+}
+
+function resetAll(){
+  if(!confirm("全リセット？")) return;
+  localStorage.clear();
+  location.reload();
 }
 
 function save(){
