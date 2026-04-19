@@ -13,10 +13,9 @@ body{
   font-family:sans-serif;
   background:#f5f5f5;
   padding:10px;
-  padding-top:150px;
 }
 
-/* ===== 上部固定エリア ===== */
+/* ===== 上部固定 ===== */
 #topFixed{
   position:fixed;
   top:0;
@@ -27,7 +26,6 @@ body{
   box-shadow:0 2px 6px rgba(0,0,0,0.2);
 }
 
-/* ボタン */
 #playerButtons{
   display:flex;
   justify-content:flex-end;
@@ -43,7 +41,6 @@ button{
   border-radius:10px;
   background:#e8f5e9;
   color:#2e7d32;
-  box-shadow:0 2px 6px rgba(0,0,0,0.15);
 }
 
 button:active{transform:scale(0.96);}
@@ -53,13 +50,7 @@ button:active{transform:scale(0.96);}
   color:#d32f2f;
 }
 
-/* ヘッダー */
-#fixedHeaderTitle{
-  font-size:22px;
-  font-weight:bold;
-  padding:4px 10px;
-}
-
+/* ===== ヘッダー ===== */
 #fixedHeader table{
   width:100%;
   table-layout:fixed;
@@ -67,9 +58,9 @@ button:active{transform:scale(0.96);}
 }
 
 #fixedHeader th{
-  height:60px;
   border:2px solid #000;
-  background:#fff;
+  height:60px;
+  font-weight:bold;
 }
 
 /* ===== テーブル ===== */
@@ -77,7 +68,6 @@ button:active{transform:scale(0.96);}
   background:#fff;
   border-radius:10px;
   padding:6px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1);
   margin-bottom:10px;
 }
 
@@ -108,53 +98,42 @@ input{
   text-align:center;
 }
 
-td.lockedCell{background:#e6ffe6;}
+.lockedCell{background:#e6ffe6;}
 
-.rank1 input{
-  background:#ffcccc;
+.rank1 input{background:#ffcccc;}
+
+.totalRow{
+  background:#eee;
+  font-weight:bold;
 }
 
-/* レイアウト */
 .rowLine{
   display:flex;
-  align-items:center;
   margin-top:6px;
   gap:6px;
 }
 
 .left{justify-content:flex-start;}
 .right{justify-content:flex-end;}
-
-select{
-  font-size:20px;
-  min-height:48px;
-}
 </style>
 </head>
 
 <body>
 
-<!-- ===== 固定エリア ===== -->
 <div id="topFixed">
-
   <div id="playerButtons">
     <button onclick="goSetting()">設定</button>
     <button onclick="saveHistory()">履歴保存</button>
     <button onclick="goHistory()">履歴</button>
   </div>
-
-  <div id="fixedHeaderTitle">点数表</div>
   <div id="fixedHeader"></div>
-
 </div>
 
-<!-- ===== テーブル ===== -->
 <div class="card">
   <table id="table"></table>
 </div>
 
 <div class="card">
-
   <div class="rowLine left">
     <button onclick="addRound()">行追加</button>
   </div>
@@ -172,66 +151,40 @@ select{
   <div class="rowLine right">
     <button class="danger" onclick="resetAll()">オールリセット</button>
   </div>
-
 </div>
 
 <script>
-
 const NOT_JOIN="__NO__";
 
 let players=[];
 let rounds=[];
 let chips=[];
 
+/* ===== 保存 ===== */
 function saveState(){
   localStorage.setItem("mahjongRounds", JSON.stringify(rounds));
   localStorage.setItem("mahjongChips", JSON.stringify(chips));
 }
 
+/* ===== 読込 ===== */
 function loadState(){
   rounds = JSON.parse(localStorage.getItem("mahjongRounds")||"[]");
   chips  = JSON.parse(localStorage.getItem("mahjongChips")||"[]");
 }
 
 function loadPlayers(){
-  const saved = JSON.parse(localStorage.getItem("mahjongPlayers") || "[]");
-  players = saved.length ? saved : ["","","",""];
-
-  if(chips.length !== players.length){
-    chips = Array(players.length).fill("");
-  }
-
-  rounds.forEach(r=>{
-    while(r.scores.length < players.length){
-      r.scores.push(r.locked?NOT_JOIN:"");
-    }
-    while(r.scores.length > players.length){
-      r.scores.pop();
-    }
-  });
+  players = JSON.parse(localStorage.getItem("mahjongPlayers")||'["","","",""]');
 }
 
+/* ===== 初期 ===== */
 window.onload=()=>{
   loadState();
   loadPlayers();
   if(rounds.length===0) addRound();
-  else renderTable();
+  renderTable();
 };
 
-window.addEventListener("focus", ()=>{
-  loadPlayers();
-  renderTable();
-});
-
-function goSetting(){
-  saveState();
-  window.location.href="player.html";
-}
-function goHistory(){
-  window.location.href="history.html";
-}
-
-/* ===== ヘッダー描画 ===== */
+/* ===== ヘッダー ===== */
 function renderHeader(){
   const wrap=document.getElementById("fixedHeader");
   wrap.innerHTML="";
@@ -243,7 +196,7 @@ function renderHeader(){
 
   players.forEach(p=>{
     const th=document.createElement("th");
-    th.innerText=p;
+    th.textContent=p;
     tr.appendChild(th);
   });
 
@@ -251,17 +204,7 @@ function renderHeader(){
   wrap.appendChild(table);
 }
 
-/* ===== 自動スクロール ===== */
-function scrollToInput(el){
-  const y = el.getBoundingClientRect().top + window.scrollY;
-  const offset = 160;
-  window.scrollTo({
-    top: y - offset,
-    behavior: "smooth"
-  });
-}
-
-/* ===== 描画 ===== */
+/* ===== メイン描画 ===== */
 function renderTable(){
   const table=document.getElementById("table");
   table.innerHTML="";
@@ -270,11 +213,11 @@ function renderTable(){
     const tr=document.createElement("tr");
     tr.appendChild(Object.assign(document.createElement("td"),{innerText:ri+1}));
 
-    let max = -Infinity;
+    let max=-Infinity;
     r.scores.forEach(v=>{
-      if(v!=="" && v!==NOT_JOIN){
-        const n = Number(v);
-        if(!isNaN(n)) max = Math.max(max,n);
+      if(v!==""&&v!==NOT_JOIN){
+        const n=Number(v);
+        if(!isNaN(n)) max=Math.max(max,n);
       }
     });
 
@@ -283,21 +226,14 @@ function renderTable(){
       const inp=document.createElement("input");
 
       inp.value=(r.scores[i]===NOT_JOIN?"不参加":r.scores[i]);
-      inp.setAttribute("inputmode","numeric");
 
       if(r.locked){
         td.classList.add("lockedCell");
         inp.disabled=true;
-        if(Number(r.scores[i]) === max) td.classList.add("rank1");
+        if(Number(r.scores[i])===max) td.classList.add("rank1");
       }else{
-        inp.onfocus=(e)=>{
-          scrollToInput(e.target);
-          handleAutoFill(ri,i);
-        };
-        inp.onclick=()=>handleAutoFill(ri,i);
         inp.oninput=e=>{
-          const val=e.target.value.trim();
-          r.scores[i]=(val==="不参加")?NOT_JOIN:val;
+          r.scores[i]=e.target.value;
           saveState();
         };
       }
@@ -309,21 +245,52 @@ function renderTable(){
     table.appendChild(tr);
   });
 
-  renderHeader();
+  /* ===== 合計 ===== */
+  const totalTr=document.createElement("tr");
+  totalTr.className="totalRow";
 
-  const sel=document.getElementById("roundDeleteList");
-  sel.innerHTML="";
-  rounds.forEach((_,i)=>{
-    const op=document.createElement("option");
-    op.value=i;
-    op.textContent=(i+1)+"行目";
-    sel.appendChild(op);
+  totalTr.appendChild(Object.assign(document.createElement("td"),{innerText:"合計"}));
+
+  players.forEach((_,i)=>{
+    let sum=0;
+    rounds.forEach(r=>{
+      const v=r.scores[i];
+      if(v!==""&&v!==NOT_JOIN){
+        const n=Number(v);
+        if(!isNaN(n)) sum+=n;
+      }
+    });
+    totalTr.appendChild(Object.assign(document.createElement("td"),{innerText:sum}));
   });
 
-  if(rounds.length>0) sel.value=rounds.length-1;
+  table.appendChild(totalTr);
+
+  renderHeader();
+  adjustPadding();
+  setTimeout(syncWidth,0);
 }
 
-/* ===== ロジック ===== */
+/* ===== 幅同期 ===== */
+function syncWidth(){
+  const main=document.getElementById("table");
+  const head=document.querySelector("#fixedHeader table");
+  if(!main.rows.length) return;
+
+  const m=main.rows[0].cells;
+  const h=head.rows[0].cells;
+
+  for(let i=0;i<m.length;i++){
+    h[i].style.width=m[i].offsetWidth+"px";
+  }
+}
+
+/* ===== 高さ補正 ===== */
+function adjustPadding(){
+  document.body.style.paddingTop =
+    document.getElementById("topFixed").offsetHeight+"px";
+}
+
+/* ===== 操作 ===== */
 function addRound(){
   rounds.push({scores:Array(players.length).fill(""),locked:false});
   saveState();
@@ -332,75 +299,37 @@ function addRound(){
 
 function deleteSelectedRound(){
   const i=Number(roundDeleteList.value);
-  if(!confirm((i+1)+"行削除しますか？")) return;
+  if(!confirm("削除？")) return;
   rounds.splice(i,1);
   saveState();
   renderTable();
 }
 
 function resetRounds(){
-  const i=Number(roundDeleteList.value);
-  if(!confirm("リセットしますか？")) return;
-  rounds[i].scores=Array(players.length).fill("");
-  rounds[i].locked=false;
+  rounds.forEach(r=>{
+    r.scores=Array(players.length).fill("");
+    r.locked=false;
+  });
   saveState();
   renderTable();
 }
 
 function resetChips(){
-  if(!confirm("チップリセットしますか？")) return;
   chips=Array(players.length).fill("");
   saveState();
-  renderTable();
 }
 
 function resetAll(){
-  if(!confirm("全リセットしますか？")) return;
-
-  localStorage.removeItem("mahjongRounds");
-  localStorage.removeItem("mahjongChips");
-
-  localStorage.setItem("mahjongPlayers", JSON.stringify(["","","",""]));
-
-  players=["","","",""];
-  chips=["","","",""];
-  rounds=[{scores:["","","",""],locked:false}];
-
-  localStorage.setItem(
-    "mahjongPlayerChecks_draft",
-    JSON.stringify([false,false,false,false])
-  );
-
-  saveState();
-  renderTable();
+  if(!confirm("全リセット？")) return;
+  localStorage.clear();
+  location.reload();
 }
 
-function handleAutoFill(ri,i){
-  const r=rounds[ri];
-  if(r.locked) return;
-
-  const nums=r.scores.map(v=>{
-    if(v===""||v===NOT_JOIN) return null;
-    const n=Number(v);
-    return isNaN(n)?null:n;
-  });
-
-  const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
-
-  if(filled.length===3 && r.scores[i]===""){
-    const sum=filled.reduce((a,j)=>a+nums[j],0);
-    r.scores[i]=-sum;
-
-    for(let k=0;k<players.length;k++){
-      if(r.scores[k]==="") r.scores[k]=NOT_JOIN;
-    }
-
-    r.locked=true;
-    saveState();
-    renderTable();
-  }
-}
-
+/* ===== 遷移 ===== */
+function goSetting(){window.location.href="player.html";}
+function goHistory(){window.location.href="history.html";}
+function saveHistory(){alert("履歴保存は未実装");}
 </script>
+
 </body>
 </html>
