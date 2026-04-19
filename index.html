@@ -51,10 +51,13 @@ button:active{transform:scale(0.96);}
 }
 
 /* ===== ヘッダー ===== */
+#fixedHeader{
+  overflow:hidden;
+}
+
 #fixedHeader table{
-  width:100%;
-  table-layout:fixed;
   border-collapse:collapse;
+  table-layout:fixed;
 }
 
 #fixedHeader th{
@@ -71,7 +74,7 @@ button:active{transform:scale(0.96);}
   margin-bottom:10px;
 }
 
-table{
+#table{
   width:100%;
   table-layout:fixed;
   border-collapse:collapse;
@@ -97,10 +100,6 @@ input{
   border:none;
   text-align:center;
 }
-
-.lockedCell{background:#e6ffe6;}
-
-.rank1 input{background:#ffcccc;}
 
 .totalRow{
   background:#eee;
@@ -130,26 +129,8 @@ input{
 </div>
 
 <div class="card">
-  <table id="table"></table>
-</div>
-
-<div class="card">
-  <div class="rowLine left">
-    <button onclick="addRound()">行追加</button>
-  </div>
-
-  <div class="rowLine right">
-    <select id="roundDeleteList"></select>
-    <button onclick="deleteSelectedRound()">選択行削除</button>
-  </div>
-
-  <div class="rowLine right">
-    <button onclick="resetRounds()">行リセット</button>
-    <button onclick="resetChips()">チップリセット</button>
-  </div>
-
-  <div class="rowLine right">
-    <button class="danger" onclick="resetAll()">オールリセット</button>
+  <div id="tableWrap" style="overflow-y:auto;">
+    <table id="table"></table>
   </div>
 </div>
 
@@ -158,28 +139,12 @@ const NOT_JOIN="__NO__";
 
 let players=[];
 let rounds=[];
-let chips=[];
-
-/* ===== 保存 ===== */
-function saveState(){
-  localStorage.setItem("mahjongRounds", JSON.stringify(rounds));
-  localStorage.setItem("mahjongChips", JSON.stringify(chips));
-}
-
-/* ===== 読込 ===== */
-function loadState(){
-  rounds = JSON.parse(localStorage.getItem("mahjongRounds")||"[]");
-  chips  = JSON.parse(localStorage.getItem("mahjongChips")||"[]");
-}
-
-function loadPlayers(){
-  players = JSON.parse(localStorage.getItem("mahjongPlayers")||'["","","",""]');
-}
 
 /* ===== 初期 ===== */
 window.onload=()=>{
-  loadState();
-  loadPlayers();
+  players = JSON.parse(localStorage.getItem("mahjongPlayers")||'["","","",""]');
+  rounds = JSON.parse(localStorage.getItem("mahjongRounds")||"[]");
+
   if(rounds.length===0) addRound();
   renderTable();
 };
@@ -204,7 +169,7 @@ function renderHeader(){
   wrap.appendChild(table);
 }
 
-/* ===== メイン描画 ===== */
+/* ===== 描画 ===== */
 function renderTable(){
   const table=document.getElementById("table");
   table.innerHTML="";
@@ -213,30 +178,15 @@ function renderTable(){
     const tr=document.createElement("tr");
     tr.appendChild(Object.assign(document.createElement("td"),{innerText:ri+1}));
 
-    let max=-Infinity;
-    r.scores.forEach(v=>{
-      if(v!==""&&v!==NOT_JOIN){
-        const n=Number(v);
-        if(!isNaN(n)) max=Math.max(max,n);
-      }
-    });
-
     players.forEach((_,i)=>{
       const td=document.createElement("td");
       const inp=document.createElement("input");
 
-      inp.value=(r.scores[i]===NOT_JOIN?"不参加":r.scores[i]);
-
-      if(r.locked){
-        td.classList.add("lockedCell");
-        inp.disabled=true;
-        if(Number(r.scores[i])===max) td.classList.add("rank1");
-      }else{
-        inp.oninput=e=>{
-          r.scores[i]=e.target.value;
-          saveState();
-        };
-      }
+      inp.value=r.scores[i]||"";
+      inp.oninput=e=>{
+        r.scores[i]=e.target.value;
+        save();
+      };
 
       td.appendChild(inp);
       tr.appendChild(td);
@@ -245,90 +195,65 @@ function renderTable(){
     table.appendChild(tr);
   });
 
-  /* ===== 合計 ===== */
-  const totalTr=document.createElement("tr");
-  totalTr.className="totalRow";
-
-  totalTr.appendChild(Object.assign(document.createElement("td"),{innerText:"合計"}));
+  /* 合計 */
+  const total=document.createElement("tr");
+  total.className="totalRow";
+  total.appendChild(Object.assign(document.createElement("td"),{innerText:"合計"}));
 
   players.forEach((_,i)=>{
     let sum=0;
     rounds.forEach(r=>{
-      const v=r.scores[i];
-      if(v!==""&&v!==NOT_JOIN){
-        const n=Number(v);
-        if(!isNaN(n)) sum+=n;
-      }
+      const n=Number(r.scores[i]);
+      if(!isNaN(n)) sum+=n;
     });
-    totalTr.appendChild(Object.assign(document.createElement("td"),{innerText:sum}));
+    total.appendChild(Object.assign(document.createElement("td"),{innerText:sum}));
   });
 
-  table.appendChild(totalTr);
+  table.appendChild(total);
 
   renderHeader();
-  adjustPadding();
-  setTimeout(syncWidth,0);
+  adjustLayout();
 }
 
-/* ===== 幅同期 ===== */
-function syncWidth(){
-  const main=document.getElementById("table");
-  const head=document.querySelector("#fixedHeader table");
-  if(!main.rows.length) return;
+/* ===== レイアウト補正（核心） ===== */
+function adjustLayout(){
+  const top=document.getElementById("topFixed");
+  document.body.style.paddingTop = top.offsetHeight + "px";
 
-  const m=main.rows[0].cells;
-  const h=head.rows[0].cells;
+  const tableWrap=document.getElementById("tableWrap");
+  const headerTable=document.querySelector("#fixedHeader table");
+  const mainTable=document.getElementById("table");
+
+  // スクロールバー幅
+  const scrollBar = tableWrap.offsetWidth - tableWrap.clientWidth;
+
+  // ヘッダー幅を縮める
+  headerTable.style.width = (mainTable.offsetWidth - scrollBar) + "px";
+
+  // 列幅同期
+  const m = mainTable.rows[0].cells;
+  const h = headerTable.rows[0].cells;
 
   for(let i=0;i<m.length;i++){
-    h[i].style.width=m[i].offsetWidth+"px";
+    h[i].style.width = m[i].offsetWidth + "px";
   }
-}
-
-/* ===== 高さ補正 ===== */
-function adjustPadding(){
-  document.body.style.paddingTop =
-    document.getElementById("topFixed").offsetHeight+"px";
 }
 
 /* ===== 操作 ===== */
 function addRound(){
-  rounds.push({scores:Array(players.length).fill(""),locked:false});
-  saveState();
+  rounds.push({scores:Array(players.length).fill("")});
+  save();
   renderTable();
 }
 
-function deleteSelectedRound(){
-  const i=Number(roundDeleteList.value);
-  if(!confirm("削除？")) return;
-  rounds.splice(i,1);
-  saveState();
-  renderTable();
-}
-
-function resetRounds(){
-  rounds.forEach(r=>{
-    r.scores=Array(players.length).fill("");
-    r.locked=false;
-  });
-  saveState();
-  renderTable();
-}
-
-function resetChips(){
-  chips=Array(players.length).fill("");
-  saveState();
-}
-
-function resetAll(){
-  if(!confirm("全リセット？")) return;
-  localStorage.clear();
-  location.reload();
+function save(){
+  localStorage.setItem("mahjongRounds", JSON.stringify(rounds));
 }
 
 /* ===== 遷移 ===== */
-function goSetting(){window.location.href="player.html";}
-function goHistory(){window.location.href="history.html";}
-function saveHistory(){alert("履歴保存は未実装");}
+function goSetting(){location.href="player.html";}
+function goHistory(){location.href="history.html";}
+function saveHistory(){alert("未実装");}
 </script>
 
 </body>
