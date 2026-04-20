@@ -68,21 +68,17 @@ th:first-child,td:first-child{border-left:2px solid #000;}
 
 #table th,#table td{height:60px;}
 
+/* sticky削除 */
 th{
-  position:sticky;
-  top:0;
+  position:static;
   background:#fff;
-  z-index:2;
 }
 
-/* ← ここ削除（名前固定やめる） */
-/*
 td:first-child{
   position:sticky;
   left:0;
   background:#fff;
 }
-*/
 
 input{
   width:100%;
@@ -99,9 +95,9 @@ input{
 
 td.lockedCell{background:#e6ffe6;}
 
-/* 1位ハイライト */
-.firstPlace{
-  background:#ffebee !important;
+/* ★ 追加：1位 */
+td.topScore{
+  background:#ffcdd2 !important;
 }
 
 /* レイアウト */
@@ -376,11 +372,10 @@ function getChipRate(){
   return isNaN(n)?0:n;
 }
 
-function scrollEnsureBottomNames(){
-  const el=document.getElementById("bottomNames");
-  if(!el) return;
+function scrollToBottomNames(){
   setTimeout(()=>{
-    el.scrollIntoView({behavior:"smooth",block:"end"});
+    const el=document.getElementById("bottomNamesRow");
+    if(el) el.scrollIntoView({block:"end"});
   },300);
 }
 
@@ -406,6 +401,17 @@ function renderTable(){
     const tr=document.createElement("tr");
     tr.appendChild(Object.assign(document.createElement("td"),{innerText:ri+1}));
 
+    // ★ 1位判定
+    let max = -Infinity;
+    if(r.locked){
+      r.scores.forEach(v=>{
+        if(v!=="" && v!==NOT_JOIN){
+          const n=Number(v);
+          if(!isNaN(n)) max=Math.max(max,n);
+        }
+      });
+    }
+
     players.forEach((_,i)=>{
       const td=document.createElement("td");
       const inp=document.createElement("input");
@@ -415,15 +421,20 @@ function renderTable(){
 
       if(r.locked){
         td.classList.add("lockedCell");
+
+        if(Number(r.scores[i])===max){
+          td.classList.add("topScore");
+        }
+
         inp.disabled=true;
       }else{
         inp.onfocus=()=>{
           handleAutoFill(ri,i);
-          scrollEnsureBottomNames();
+          scrollToBottomNames();
         };
         inp.onclick=()=>{
           handleAutoFill(ri,i);
-          scrollEnsureBottomNames();
+          scrollToBottomNames();
         };
         inp.oninput=e=>{
           const val=e.target.value.trim();
@@ -464,11 +475,11 @@ function renderTable(){
 
     inp.onfocus=()=>{
       handleChipAutoFill(i);
-      scrollEnsureBottomNames();
+      scrollToBottomNames();
     };
     inp.onclick=()=>{
       handleChipAutoFill(i);
-      scrollEnsureBottomNames();
+      scrollToBottomNames();
     };
 
     inp.oninput=e=>{
@@ -482,41 +493,34 @@ function renderTable(){
 
   table.appendChild(chipRow);
 
-  const results = players.map((_,i)=>{
-    const chip = chips[i]==="±0"?0:Number(chips[i]||0);
-    return totals[i] + chip*rate;
-  });
-
-  const max = Math.max(...results);
-
   const resultRow=document.createElement("tr");
   resultRow.appendChild(Object.assign(document.createElement("td"),{innerText:"結果"}));
 
-  results.forEach(v=>{
+  players.forEach((_,i)=>{
     const td=document.createElement("td");
-    td.innerText = v;
-    if(v===max) td.classList.add("firstPlace");
+    const chip = chips[i]==="±0"?0:Number(chips[i]||0);
+    td.innerText = totals[i] + chip*rate;
     resultRow.appendChild(td);
   });
 
   table.appendChild(resultRow);
 
-  /* 下段名前欄 */
-  const nameBottom=document.createElement("tr");
-  nameBottom.id="bottomNames";
-  nameBottom.appendChild(document.createElement("td"));
+  // ★ 下段名前欄
+  const bottomRow=document.createElement("tr");
+  bottomRow.id="bottomNamesRow";
+  bottomRow.appendChild(document.createElement("td"));
 
-  players.forEach(p=>{
+  players.forEach((p)=>{
     const td=document.createElement("td");
     const inp=document.createElement("input");
     inp.value=p;
     inp.readOnly=true;
     inp.classList.add("nameLocked");
     td.appendChild(inp);
-    nameBottom.appendChild(td);
+    bottomRow.appendChild(td);
   });
 
-  table.appendChild(nameBottom);
+  table.appendChild(bottomRow);
 
   const sel=document.getElementById("roundDeleteList");
   sel.innerHTML="";
