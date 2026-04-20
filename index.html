@@ -75,11 +75,14 @@ th{
   z-index:2;
 }
 
+/* ← ここ削除（名前固定やめる） */
+/*
 td:first-child{
   position:sticky;
   left:0;
   background:#fff;
 }
+*/
 
 input{
   width:100%;
@@ -95,6 +98,11 @@ input{
 }
 
 td.lockedCell{background:#e6ffe6;}
+
+/* 1位ハイライト */
+.firstPlace{
+  background:#ffebee !important;
+}
 
 /* レイアウト */
 .rowLine{
@@ -368,6 +376,14 @@ function getChipRate(){
   return isNaN(n)?0:n;
 }
 
+function scrollEnsureBottomNames(){
+  const el=document.getElementById("bottomNames");
+  if(!el) return;
+  setTimeout(()=>{
+    el.scrollIntoView({behavior:"smooth",block:"end"});
+  },300);
+}
+
 function renderTable(){
   const table=document.getElementById("table");
   table.innerHTML="";
@@ -401,8 +417,14 @@ function renderTable(){
         td.classList.add("lockedCell");
         inp.disabled=true;
       }else{
-        inp.onfocus=()=>handleAutoFill(ri,i);
-        inp.onclick=()=>handleAutoFill(ri,i);
+        inp.onfocus=()=>{
+          handleAutoFill(ri,i);
+          scrollEnsureBottomNames();
+        };
+        inp.onclick=()=>{
+          handleAutoFill(ri,i);
+          scrollEnsureBottomNames();
+        };
         inp.oninput=e=>{
           const val=e.target.value.trim();
           r.scores[i]=(val==="不参加")?NOT_JOIN:val;
@@ -440,8 +462,14 @@ function renderTable(){
     inp.value=chips[i]||"";
     inp.setAttribute("inputmode","numeric");
 
-    inp.onfocus=()=>handleChipAutoFill(i);
-    inp.onclick=()=>handleChipAutoFill(i);
+    inp.onfocus=()=>{
+      handleChipAutoFill(i);
+      scrollEnsureBottomNames();
+    };
+    inp.onclick=()=>{
+      handleChipAutoFill(i);
+      scrollEnsureBottomNames();
+    };
 
     inp.oninput=e=>{
       chips[i]=e.target.value;
@@ -454,17 +482,41 @@ function renderTable(){
 
   table.appendChild(chipRow);
 
+  const results = players.map((_,i)=>{
+    const chip = chips[i]==="±0"?0:Number(chips[i]||0);
+    return totals[i] + chip*rate;
+  });
+
+  const max = Math.max(...results);
+
   const resultRow=document.createElement("tr");
   resultRow.appendChild(Object.assign(document.createElement("td"),{innerText:"結果"}));
 
-  players.forEach((_,i)=>{
+  results.forEach(v=>{
     const td=document.createElement("td");
-    const chip = chips[i]==="±0"?0:Number(chips[i]||0);
-    td.innerText = totals[i] + chip*rate;
+    td.innerText = v;
+    if(v===max) td.classList.add("firstPlace");
     resultRow.appendChild(td);
   });
 
   table.appendChild(resultRow);
+
+  /* 下段名前欄 */
+  const nameBottom=document.createElement("tr");
+  nameBottom.id="bottomNames";
+  nameBottom.appendChild(document.createElement("td"));
+
+  players.forEach(p=>{
+    const td=document.createElement("td");
+    const inp=document.createElement("input");
+    inp.value=p;
+    inp.readOnly=true;
+    inp.classList.add("nameLocked");
+    td.appendChild(inp);
+    nameBottom.appendChild(td);
+  });
+
+  table.appendChild(nameBottom);
 
   const sel=document.getElementById("roundDeleteList");
   sel.innerHTML="";
