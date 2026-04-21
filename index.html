@@ -152,8 +152,6 @@ select{
 
 <script>
 
-// ===== 元コードそのまま =====
-
 const NOT_JOIN="__NO__";
 
 let players=[];
@@ -303,6 +301,51 @@ function resetAll(){
 
   saveState();
   renderTable();
+}
+
+function handleAutoFill(ri,i){
+  const r=rounds[ri];
+  if(r.locked) return;
+
+  const nums=r.scores.map(v=>{
+    if(v===""||v===NOT_JOIN) return null;
+    const n=Number(v);
+    return isNaN(n)?null:n;
+  });
+
+  const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
+
+  if(filled.length===3 && r.scores[i]===""){
+    const sum=filled.reduce((a,j)=>a+nums[j],0);
+    r.scores[i]=-sum;
+
+    for(let k=0;k<players.length;k++){
+      if(r.scores[k]==="") r.scores[k]=NOT_JOIN;
+    }
+
+    r.locked=true;
+    saveState();
+    renderTable();
+  }
+}
+
+function handleChipAutoFill(i){
+  const nums=chips.map(v=>{
+    if(v==="") return null;
+    if(v==="±0") return 0;
+    const n=Number(v);
+    return isNaN(n)?null:n;
+  });
+
+  const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
+
+  if(filled.length===players.length-1 && chips[i]===""){
+    const sum=filled.reduce((a,j)=>a+nums[j],0);
+    const val=-sum;
+    chips[i]=(val===0)?"±0":val;
+    saveState();
+    renderTable();
+  }
 }
 
 function getTotals(){
@@ -477,61 +520,53 @@ function renderTable(){
   }
 }
 
-// ===== 追加（フックのみ） =====
+/* ===== 追加処理（ここからのみ追加） ===== */
 
-// 入力制限＋±0表示＋結果制御
 (function(){
-  const oldRender = renderTable;
 
-  renderTable = function(){
-    oldRender();
+// 入力制限（イベント委譲）
+document.addEventListener("input",function(e){
+  const t=e.target;
+  if(t.tagName!=="INPUT") return;
+  if(!t.closest("#table")) return;
 
-    // input処理
-    document.querySelectorAll("#table input").forEach(inp=>{
-      if(inp.dataset.fixed) return;
-      inp.dataset.fixed="1";
+  let v=t.value;
+  if(v==="") return;
 
-      inp.addEventListener("input",e=>{
-        let v=e.target.value;
+  v=v.replace(/[^0-9\-]/g,"");
+  if(v.indexOf("-")>0){
+    v=v.replace(/-/g,"");
+  }
 
-        // 数字と-のみ
-        v=v.replace(/[^0-9\-]/g,"");
-        if(v.indexOf("-")>0){
-          v=v.replace(/-/g,"");
-        }
+  t.value=v;
+});
 
-        e.target.value=v;
-      });
+// renderフック
+const oldRender = renderTable;
+renderTable = function(){
+  oldRender();
+  controlResult();
+};
 
-      inp.addEventListener("blur",e=>{
-        if(e.target.value==="0"){
-          e.target.value="±0";
-        }
-      });
+// 結果欄制御
+function controlResult(){
+  const rows=document.querySelectorAll("#table tr");
+  if(rows.length<3) return;
 
-      inp.addEventListener("focus",e=>{
-        if(e.target.value==="±0"){
-          e.target.value="0";
-        }
-      });
+  const resultRow = rows[rows.length-2];
+  const chipRow   = rows[rows.length-3];
+
+  const inputs = chipRow.querySelectorAll("input");
+
+  const filled=[...inputs].every(inp=>inp.value!=="" && inp.value!=null);
+
+  if(!filled){
+    resultRow.querySelectorAll("td").forEach((td,i)=>{
+      if(i!==0) td.innerText="";
     });
+  }
+}
 
-    // 結果欄制御
-    const rows=document.querySelectorAll("#table tr");
-    if(rows.length<2) return;
-
-    const resultRow=rows[rows.length-2];
-    const chipRow=rows[rows.length-3];
-
-    const chipsFilled=[...chipRow.querySelectorAll("input")]
-      .every(inp=>inp.value!=="" && inp.value!==null);
-
-    if(!chipsFilled){
-      resultRow.querySelectorAll("td").forEach((td,i)=>{
-        if(i!==0) td.innerText="";
-      });
-    }
-  };
 })();
 
 </script>
