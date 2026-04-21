@@ -91,8 +91,6 @@ input{
 
 td.lockedCell{background:#e6ffe6;}
 td.topScore{background:#ffcdd2 !important;}
-
-/* ★追加：チップ確定 */
 td.chipLocked{background:#e6ffe6;}
 
 .rowLine{
@@ -207,10 +205,9 @@ function goHistory(){
   window.location.href="history.html";
 }
 
-/* ★表示用フォーマット（ロジック非変更） */
+/* 表示用 */
 function formatZero(v){
-  if(v===0) return "±0";
-  return v;
+  return (v===0)?"±0":v;
 }
 
 function isChipLocked(){
@@ -264,13 +261,24 @@ function renderTable(){
 
       if(r.locked){
         td.classList.add("lockedCell");
+
         if(Number(r.scores[i])===max){
           td.classList.add("topScore");
         }
+
         inp.disabled=true;
       }else{
+        inp.onfocus=()=>{
+          handleAutoFill(ri,i);
+          scrollToBottomNames();
+        };
+        inp.onclick=()=>{
+          handleAutoFill(ri,i);
+          scrollToBottomNames();
+        };
         inp.oninput=e=>{
-          const v=e.target.value.trim();
+          let v=e.target.value.trim();
+          if(v==="±0") v="0";
           r.scores[i]=(v==="不参加")?NOT_JOIN:v;
           saveState();
         };
@@ -312,8 +320,19 @@ function renderTable(){
     inp.value=val||"";
     inp.setAttribute("inputmode","numeric");
 
+    inp.onfocus=()=>{
+      handleChipAutoFill(i);
+      scrollToBottomNames();
+    };
+    inp.onclick=()=>{
+      handleChipAutoFill(i);
+      scrollToBottomNames();
+    };
+
     inp.oninput=e=>{
-      chips[i]=e.target.value;
+      let v=e.target.value;
+      if(v==="±0") v="0";
+      chips[i]=v;
       saveState();
     };
 
@@ -330,14 +349,15 @@ function renderTable(){
   const resultRow=document.createElement("tr");
   resultRow.appendChild(Object.assign(document.createElement("td"),{innerText:"結果"}));
 
-  const showResult = isChipLocked();
+  const showResult=isChipLocked();
 
   players.forEach((_,i)=>{
     const td=document.createElement("td");
 
     if(showResult){
       const chip = chips[i]==="±0"?0:Number(chips[i]||0);
-      td.innerText=formatZero(totals[i] + chip*rate);
+      const res = totals[i] + chip*rate;
+      td.innerText=formatZero(res);
     }else{
       td.innerText="";
     }
@@ -377,7 +397,7 @@ function renderTable(){
   }
 }
 
-/* ★既存ロジック（そのまま） */
+/* 元ロジックそのまま */
 function getTotals(){
   const totals=Array(players.length).fill(0);
   rounds.forEach(r=>{
