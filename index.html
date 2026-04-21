@@ -454,7 +454,7 @@ function renderTable(){
 
   totals.forEach(v=>{
     const td=document.createElement("td");
-    td.innerText=v===0?"±0":v;
+    td.innerText=v;
     tr.appendChild(td);
   });
   table.appendChild(tr);
@@ -479,9 +479,7 @@ function renderTable(){
     };
 
     inp.oninput=e=>{
-      let v=e.target.value.trim();
-      if(v==="±0") v="0";
-      chips[i]=v;
+      chips[i]=e.target.value;
       saveState();
     };
 
@@ -497,8 +495,7 @@ function renderTable(){
   players.forEach((_,i)=>{
     const td=document.createElement("td");
     const chip = chips[i]==="±0"?0:Number(chips[i]||0);
-    const val = totals[i] + chip*rate;
-    td.innerText = val===0?"±0":val;
+    td.innerText = totals[i] + chip*rate;
     resultRow.appendChild(td);
   });
 
@@ -536,14 +533,11 @@ function renderTable(){
 }
 
 // =========================
-// ★追加：±0表示統一（安全拡張）
+// ★追加①：±0表示
 // =========================
-
 function applyPlusMinusZero(){
   document.querySelectorAll("input").forEach(inp=>{
-    if(inp.value==="0" || inp.value===0){
-      inp.value="±0";
-    }
+    if(inp.value==="0") inp.value="±0";
 
     inp.addEventListener("focus", ()=>{
       if(inp.value==="±0") inp.value="0";
@@ -555,10 +549,37 @@ function applyPlusMinusZero(){
   });
 }
 
+// =========================
+// ★追加②：結果欄制御
+// =========================
+function controlResultRow(){
+  const rows = document.querySelectorAll("#table tr");
+  if(rows.length===0) return;
+
+  const resultRow = rows[rows.length-2]; // 結果行
+  if(!resultRow) return;
+
+  const allFilled = chips.every(v=>v!=="" && v!==null);
+
+  const tds = resultRow.querySelectorAll("td");
+
+  tds.forEach((td,i)=>{
+    if(i===0) return; // 「結果」は残す
+
+    if(!allFilled){
+      td.innerText="";
+    }
+  });
+}
+
+// =========================
+// ★renderフック（安全）
+// =========================
 const __render = renderTable;
 renderTable = function(){
   __render();
   applyPlusMinusZero();
+  controlResultRow();
 };
 
 </script>
