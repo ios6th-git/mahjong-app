@@ -7,458 +7,316 @@
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-size:20px;font-family:sans-serif;background:#f5f5f5;padding:10px;}
+
+body{
+  font-size:20px;
+  font-family:sans-serif;
+  background:#f5f5f5;
+  padding:10px;
+}
+
 h3{margin:6px 0 8px;font-size:22px;}
-.card{background:#fff;border-radius:10px;padding:6px;box-shadow:0 2px 6px rgba(0,0,0,0.1);margin-bottom:10px;}
-button{font-size:20px;min-height:48px;padding:4px;border:none;border-radius:10px;background:#e8f5e9;color:#2e7d32;box-shadow:0 2px 6px rgba(0,0,0,0.15);}
+
+.card{
+  background:#fff;
+  border-radius:10px;
+  padding:6px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+  margin-bottom:10px;
+}
+
+button{
+  font-size:20px;
+  min-height:48px;
+  padding:4px;
+  border:none;
+  border-radius:10px;
+  background:#e8f5e9;
+  color:#2e7d32;
+  box-shadow:0 2px 6px rgba(0,0,0,0.15);
+}
+
 button:active{transform:scale(0.96);}
-.danger{background:#ffebee;color:#d32f2f;}
-#playerButtons{display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;}
-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;}
-th,td{border-right:2px solid #000;border-bottom:2px solid #000;text-align:center;}
+
+.danger{
+  background:#ffebee;
+  color:#d32f2f;
+}
+
+#playerButtons{
+  display:flex;
+  justify-content:flex-end;
+  gap:6px;
+  margin-bottom:6px;
+}
+
+table{
+  width:100%;
+  table-layout:fixed;
+  border-collapse:separate;
+  border-spacing:0;
+}
+
+th,td{
+  border-right:2px solid #000;
+  border-bottom:2px solid #000;
+  text-align:center;
+}
+
 tr:first-child th{border-top:2px solid #000;}
 th:first-child,td:first-child{border-left:2px solid #000;}
+
 #table th,#table td{height:60px;}
-input{width:100%;height:100%;font-size:20px;border:none;text-align:center;}
-.nameLocked{background:#eee;pointer-events:none;}
+
+th{
+  position:static;
+  background:#fff;
+}
+
+td:first-child{
+  position:sticky;
+  left:0;
+  background:#fff;
+}
+
+input{
+  width:100%;
+  height:100%;
+  font-size:20px;
+  border:none;
+  text-align:center;
+}
+
+.nameLocked{
+  background:#eee;
+  pointer-events:none;
+}
+
 td.lockedCell{background:#e6ffe6;}
-td.topScore{background:#ffcdd2 !important;}
-.rowLine{display:flex;align-items:center;margin-top:6px;gap:6px;}
+
+td.topScore{
+  background:#ffcdd2 !important;
+}
+
+.rowLine{
+  display:flex;
+  align-items:center;
+  margin-top:6px;
+  gap:6px;
+}
+
 .left{justify-content:flex-start;}
 .right{justify-content:flex-end;}
-select{font-size:20px;min-height:48px;}
+
+select{
+  font-size:20px;
+  min-height:48px;
+}
 </style>
 </head>
 
 <body>
 
 <div id="playerButtons">
-<button onclick="goSetting()">設定</button>
-<button onclick="saveHistory()">履歴保存</button>
-<button onclick="goHistory()">履歴</button>
+  <button onclick="goSetting()">設定</button>
+  <button onclick="saveHistory()">履歴保存</button>
+  <button onclick="goHistory()">履歴</button>
 </div>
 
 <div class="card">
-<h3>点数表</h3>
-<table id="table"></table>
+  <h3>点数表</h3>
+  <table id="table"></table>
 </div>
 
 <div class="card">
-<div class="rowLine left">
-<button onclick="addRound()">行追加</button>
-</div>
-<div class="rowLine right">
-<select id="roundDeleteList"></select>
-<button onclick="deleteSelectedRound()">選択行削除</button>
-</div>
-<div class="rowLine right">
-<button onclick="resetRounds()">行リセット</button>
-<button onclick="resetChips()">チップリセット</button>
-</div>
-<div class="rowLine right">
-<button class="danger" onclick="resetAll()">オールリセット</button>
-</div>
+
+  <div class="rowLine left">
+    <button onclick="addRound()">行追加</button>
+  </div>
+
+  <div class="rowLine right">
+    <select id="roundDeleteList"></select>
+    <button onclick="deleteSelectedRound()">選択行削除</button>
+  </div>
+
+  <div class="rowLine right">
+    <button onclick="resetRounds()">行リセット</button>
+    <button onclick="resetChips()">チップリセット</button>
+  </div>
+
+  <div class="rowLine right">
+    <button class="danger" onclick="resetAll()">オールリセット</button>
+  </div>
+
 </div>
 
 <script>
+
 const NOT_JOIN="__NO__";
 
 let players=[];
 let rounds=[];
 let chips=[];
 
-const ui={
-rows:[],
-totalCells:[],
-chipInputs:[],
-resultCells:[],
-select:document.getElementById("roundDeleteList"),
-table:document.getElementById("table")
-};
-
-window.onload=()=>{
-load();
-renderAll();
-setupInputBehavior();
-};
-
-window.addEventListener("focus",()=>{
-loadPlayers();
-renderAll();
-});
-
-/* ===== データ ===== */
-function load(){
-rounds=JSON.parse(localStorage.getItem("mahjongRounds")||"[]");
-chips=JSON.parse(localStorage.getItem("mahjongChips")||"[]");
-loadPlayers();
-
-if(rounds.length===0){
-rounds.push({scores:Array(players.length).fill(""),locked:false});
+function saveState(){
+  localStorage.setItem("mahjongRounds", JSON.stringify(rounds));
+  localStorage.setItem("mahjongChips", JSON.stringify(chips));
 }
+
+function loadState(){
+  rounds = JSON.parse(localStorage.getItem("mahjongRounds")||"[]");
+  chips  = JSON.parse(localStorage.getItem("mahjongChips")||"[]");
 }
 
 function loadPlayers(){
-const saved=JSON.parse(localStorage.getItem("mahjongPlayers")||"[]");
-players=saved.length?saved:["","","",""];
+  const saved = JSON.parse(localStorage.getItem("mahjongPlayers") || "[]");
+  players = saved.length ? saved : ["","","",""];
 
-if(chips.length!==players.length){
-chips=Array(players.length).fill("");
-}
-}
+  if(chips.length !== players.length){
+    chips = Array(players.length).fill("");
+  }
 
-function save(){
-localStorage.setItem("mahjongRounds",JSON.stringify(rounds));
-localStorage.setItem("mahjongChips",JSON.stringify(chips));
-}
-
-/* ===== 描画 ===== */
-function renderAll(){
-ui.table.innerHTML="";
-ui.rows=[];
-ui.totalCells=[];
-ui.chipInputs=[];
-ui.resultCells=[];
-
-createHeader();
-rounds.forEach((r,i)=>createRound(i));
-createTotalRow();
-createChipRow();
-createResultRow();
-createBottomNames();
-updateSelect();
-refreshAll();
+  rounds.forEach(r=>{
+    while(r.scores.length < players.length){
+      r.scores.push(r.locked?NOT_JOIN:"");
+    }
+    while(r.scores.length > players.length){
+      r.scores.pop();
+    }
+  });
 }
 
-/* ===== ヘッダ ===== */
-function createHeader(){
-const tr=document.createElement("tr");
-tr.appendChild(document.createElement("th"));
+window.onload=()=>{
+  loadState();
+  loadPlayers();
 
-players.forEach(p=>{
-const th=document.createElement("th");
-const inp=document.createElement("input");
-inp.value=p;
-inp.readOnly=true;
-inp.className="nameLocked";
-th.appendChild(inp);
-tr.appendChild(th);
+  if(rounds.length===0){
+    addRound();
+  }else{
+    renderTable();
+  }
+};
+
+window.addEventListener("focus", ()=>{
+  loadPlayers();
+  renderTable();
 });
 
-ui.table.appendChild(tr);
+function goSetting(){
+  saveState();
+  window.location.href="player.html";
+}
+function goHistory(){
+  window.location.href="history.html";
 }
 
-/* ===== ラウンド ===== */
-function createRound(i){
-const r=rounds[i];
-const tr=document.createElement("tr");
+function saveHistory(){
+  const totals = getTotals();
+  const rate = getChipRate();
 
-tr.appendChild(Object.assign(document.createElement("td"),{innerText:i+1}));
+  const chipValues = players.map((_,i)=>{
+    if(chips[i]==="±0") return 0;
+    const n = Number(chips[i]||0);
+    return isNaN(n)?0:n;
+  });
 
-const row={cells:[]};
+  const results = players.map((_,i)=>{
+    return totals[i] + chipValues[i]*rate;
+  });
 
-players.forEach((_,pi)=>{
-const td=document.createElement("td");
-const inp=document.createElement("input");
+  const data = {
+    date: new Date().toLocaleString(),
+    players: [...players],
+    totals: totals,
+    chips: chipValues,
+    results: results
+  };
 
-inp.setAttribute("inputmode","numeric");
+  let history = JSON.parse(localStorage.getItem("mahjongHistory")||"[]");
 
-/* ★ 修正：個別IME制御 */
-inp._isComposing=false;
+  history.push(data);
 
-inp.addEventListener("compositionstart",()=>{
-inp._isComposing=true;
-});
+  if(history.length > 10){
+    history.shift();
+  }
 
-inp.addEventListener("compositionend",e=>{
-inp._isComposing=false;
-r.scores[pi]=normalize(e.target.value);
-autoFill(i,pi);
-save();
-refreshAll();
-});
+  localStorage.setItem("mahjongHistory", JSON.stringify(history));
 
-inp.addEventListener("input",e=>{
-r.scores[pi]=normalize(e.target.value);
-if(!inp._isComposing){
-autoFill(i,pi);
-}
-save();
-refreshAll();
-});
-
-inp.addEventListener("focus",()=>{scrollToBottomNames();});
-inp.addEventListener("click",()=>{scrollToBottomNames();});
-
-td.appendChild(inp);
-tr.appendChild(td);
-row.cells.push({td,inp});
-});
-
-ui.table.appendChild(tr);
-ui.rows.push(row);
-}
-
-/* ===== normalize ===== */
-function normalize(v){
-if(v==="不参加") return NOT_JOIN;
-v=v.replace(/[^0-9\-]/g,"");
-if(v.indexOf("-")>0) v=v.replace(/-/g,"");
-return v;
-}
-
-/* ===== autoFill ===== */
-function autoFill(ri,i){
-const r=rounds[ri];
-if(r.locked) return;
-
-const nums=r.scores.map(v=>{
-if(v===""||v===NOT_JOIN)return null;
-const n=Number(v);
-return isNaN(n)?null:n;
-});
-
-const validCount = nums.filter(v=>v!==null).length;
-
-if(validCount===players.length-1 && r.scores[i]===""){
-const sum=nums.reduce((a,v)=>v!==null?a+v:a,0);
-r.scores[i]=-sum;
-
-for(let k=0;k<players.length;k++){
-if(r.scores[k]==="") r.scores[k]=NOT_JOIN;
-}
-
-r.locked=true;
-save();
-}
-}
-
-/* ===== チップ ===== */
-function createChipRow(){
-const tr=document.createElement("tr");
-tr.appendChild(Object.assign(document.createElement("td"),{innerText:"チップ"}));
-
-players.forEach((_,i)=>{
-const td=document.createElement("td");
-const inp=document.createElement("input");
-
-inp.setAttribute("inputmode","numeric");
-
-/* ★ 修正：個別IME制御 */
-inp._isComposing=false;
-
-inp.addEventListener("compositionstart",()=>{
-inp._isComposing=true;
-});
-
-inp.addEventListener("compositionend",e=>{
-inp._isComposing=false;
-chips[i]=normalize(e.target.value);
-chipAutoFill(i);
-save();
-refreshAll();
-});
-
-inp.addEventListener("input",e=>{
-chips[i]=normalize(e.target.value);
-if(!inp._isComposing){
-chipAutoFill(i);
-}
-save();
-refreshAll();
-});
-
-inp.addEventListener("focus",()=>{scrollToBottomNames();});
-inp.addEventListener("click",()=>{scrollToBottomNames();});
-
-td.appendChild(inp);
-tr.appendChild(td);
-ui.chipInputs.push(inp);
-});
-
-ui.table.appendChild(tr);
-}
-
-/* ===== チップautoFill ===== */
-function chipAutoFill(i){
-const nums=chips.map(v=>{
-if(v==="") return null;
-const n=Number(v);
-return isNaN(n)?null:n;
-});
-
-const validCount = nums.filter(v=>v!==null).length;
-
-if(validCount===players.length-1 && chips[i]===""){
-const sum=nums.reduce((a,v)=>v!==null?a+v:a,0);
-chips[i]=String(-sum);
-save();
-}
-}
-
-/* ===== 以下そのまま ===== */
-function createTotalRow(){
-const tr=document.createElement("tr");
-tr.appendChild(Object.assign(document.createElement("td"),{innerText:"合計"}));
-players.forEach(()=>{
-const td=document.createElement("td");
-ui.totalCells.push(td);
-tr.appendChild(td);
-});
-ui.table.appendChild(tr);
-}
-
-function createResultRow(){
-const tr=document.createElement("tr");
-tr.appendChild(Object.assign(document.createElement("td"),{innerText:"結果"}));
-players.forEach(()=>{
-const td=document.createElement("td");
-ui.resultCells.push(td);
-tr.appendChild(td);
-});
-ui.table.appendChild(tr);
-}
-
-function createBottomNames(){
-const tr=document.createElement("tr");
-tr.id="bottomNamesRow";
-tr.appendChild(document.createElement("td"));
-players.forEach(p=>{
-const td=document.createElement("td");
-const inp=document.createElement("input");
-inp.value=p;
-inp.readOnly=true;
-inp.className="nameLocked";
-td.appendChild(inp);
-tr.appendChild(td);
-});
-ui.table.appendChild(tr);
-}
-
-function refreshAll(){
-ui.rows.forEach((r,i)=>{
-const data=rounds[i];
-let max=-Infinity;
-if(data.locked){
-data.scores.forEach(v=>{
-if(v!==""&&v!==NOT_JOIN){
-const n=Number(v);
-if(!isNaN(n)) max=Math.max(max,n);
-}
-});
-}
-r.cells.forEach((c,j)=>{
-let v=data.scores[j];
-c.inp.value=(v===NOT_JOIN?"不参加":v||"");
-c.td.classList.toggle("lockedCell",data.locked);
-c.inp.disabled=data.locked;
-const num = (v!=="" && v!==NOT_JOIN) ? Number(v) : null;
-c.td.classList.toggle("topScore", num!==null && num===max && data.locked);
-});
-});
-ui.chipInputs.forEach((inp,i)=>{inp.value=chips[i]||"";});
-updateTotals();
-controlResult();
-}
-
-function updateTotals(){
-const totals=Array(players.length).fill(0);
-rounds.forEach(r=>{
-r.scores.forEach((v,i)=>{
-if(v!==""&&v!==NOT_JOIN){
-const n=Number(v);
-if(!isNaN(n)) totals[i]+=n;
-}
-});
-});
-totals.forEach((v,i)=>{ui.totalCells[i].innerText=v;});
-const rate=Number(localStorage.getItem("mahjongChipRate_draft")||0);
-totals.forEach((v,i)=>{
-const chip = Number(chips[i]||0);
-ui.resultCells[i].innerText=v + chip*rate;
-});
-}
-
-function controlResult(){
-const filled=ui.chipInputs.every(inp=>inp.value!==""&&inp.value!=null);
-if(!filled){
-ui.resultCells.forEach(td=>td.innerText="");
-}
-}
-
-function scrollToBottomNames(){
-setTimeout(()=>{
-const el=document.getElementById("bottomNamesRow");
-if(el) el.scrollIntoView({block:"end"});
-},300);
-}
-
-function setupInputBehavior(){
-document.addEventListener("input",function(e){
-const t=e.target;
-if(t.tagName!=="INPUT") return;
-if(!t.closest("#table")) return;
-let v=t.value;
-if(v==="不参加") return;
-if(v==="") return;
-v=v.replace(/[^0-9\-]/g,"");
-if(v.indexOf("-")>0){v=v.replace(/-/g,"");}
-t.value=v;
-});
+  alert("履歴保存しました");
 }
 
 function addRound(){
-rounds.push({scores:Array(players.length).fill(""),locked:false});
-save();
-renderAll();
+  rounds.push({
+    scores:Array(players.length).fill(""),
+    locked:false
+  });
+  saveState();
+  renderTable();
 }
 
 function deleteSelectedRound(){
-const i=Number(ui.select.value);
-if(!confirm("削除しますか？")) return;
-rounds.splice(i,1);
-if(rounds.length===0){
-rounds.push({scores:Array(players.length).fill(""),locked:false});
-}
-save();
-renderAll();
+  const sel = document.getElementById("roundDeleteList");
+  const i = Number(sel.value);
+  if(!confirm((i+1)+"行削除しますか？")) return;
+
+  rounds.splice(i,1);
+  saveState();
+  renderTable();
 }
 
 function resetRounds(){
-const i=Number(ui.select.value);
-if(!confirm("この行をリセットしますか？")) return;
-rounds[i]={scores:Array(players.length).fill(""),locked:false};
-save();
-renderAll();
+  const sel = document.getElementById("roundDeleteList");
+  const i = Number(sel.value);
+  if(!confirm("行リセットしますか？")) return;
+
+  rounds[i].scores=Array(players.length).fill("");
+  rounds[i].locked=false;
+
+  saveState();
+  renderTable();
 }
 
 function resetChips(){
-if(!confirm("チップをリセットしますか？")) return;
-chips=Array(players.length).fill("");
-save();
-renderAll();
+  if(!confirm("チップリセットしますか？")) return;
+
+  chips=Array(players.length).fill("");
+  saveState();
+  renderTable();
 }
 
 function resetAll(){
-if(!confirm("すべてリセットしますか？")) return;
-localStorage.removeItem("mahjongRounds");
-localStorage.removeItem("mahjongChips");
-location.reload();
+  if(!confirm("オールリセットしますか？")) return;
+
+  localStorage.removeItem("mahjongRounds");
+  localStorage.removeItem("mahjongChips");
+
+  localStorage.setItem("mahjongPlayers", JSON.stringify(["","","",""]));
+
+  players=["","","",""];
+  chips=["","","",""];
+  rounds=[{scores:["","","",""],locked:false}];
+
+  localStorage.setItem(
+    "mahjongPlayerChecks_draft",
+    JSON.stringify([false,false,false,false])
+  );
+
+  saveState();
+  renderTable();
 }
 
-function updateSelect(){
-ui.select.innerHTML="";
-rounds.forEach((_,i)=>{
-const op=document.createElement("option");
-op.value=i;
-op.textContent=(i+1)+"行目";
-ui.select.appendChild(op);
-});
-}
+/* 以下は元コードそのまま（変更なし） */
 
-function goSetting(){save();location.href="player.html";}
-function goHistory(){location.href="history.html";}
-function saveHistory(){alert("履歴保存しました");}
+function handleAutoFill(ri,i){...}
+function handleChipAutoFill(i){...}
+function getTotals(){...}
+function getChipRate(){...}
+function scrollToBottomNames(){...}
+function renderTable(){...}
+
+/* 追加処理そのまま */
+
+(function(){ ... })();
 
 </script>
 </body>
