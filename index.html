@@ -66,7 +66,6 @@ const NOT_JOIN="__NO__";
 let players=[];
 let rounds=[];
 let chips=[];
-let isComposing=false;
 
 const ui={
 rows:[],
@@ -164,9 +163,15 @@ const inp=document.createElement("input");
 
 inp.setAttribute("inputmode","numeric");
 
-inp.addEventListener("compositionstart",()=>{isComposing=true;});
+/* ★ 修正：個別IME制御 */
+inp._isComposing=false;
+
+inp.addEventListener("compositionstart",()=>{
+inp._isComposing=true;
+});
+
 inp.addEventListener("compositionend",e=>{
-isComposing=false;
+inp._isComposing=false;
 r.scores[pi]=normalize(e.target.value);
 autoFill(i,pi);
 save();
@@ -175,7 +180,7 @@ refreshAll();
 
 inp.addEventListener("input",e=>{
 r.scores[pi]=normalize(e.target.value);
-if(!isComposing){
+if(!inp._isComposing){
 autoFill(i,pi);
 }
 save();
@@ -239,9 +244,15 @@ const inp=document.createElement("input");
 
 inp.setAttribute("inputmode","numeric");
 
-inp.addEventListener("compositionstart",()=>{isComposing=true;});
+/* ★ 修正：個別IME制御 */
+inp._isComposing=false;
+
+inp.addEventListener("compositionstart",()=>{
+inp._isComposing=true;
+});
+
 inp.addEventListener("compositionend",e=>{
-isComposing=false;
+inp._isComposing=false;
 chips[i]=normalize(e.target.value);
 chipAutoFill(i);
 save();
@@ -250,7 +261,7 @@ refreshAll();
 
 inp.addEventListener("input",e=>{
 chips[i]=normalize(e.target.value);
-if(!isComposing){
+if(!inp._isComposing){
 chipAutoFill(i);
 }
 save();
@@ -285,7 +296,7 @@ save();
 }
 }
 
-/* ===== 以下変更なし（省略禁止のため全部記載） ===== */
+/* ===== 以下そのまま ===== */
 function createTotalRow(){
 const tr=document.createElement("tr");
 tr.appendChild(Object.assign(document.createElement("td"),{innerText:"合計"}));
@@ -430,7 +441,8 @@ renderAll();
 
 function resetAll(){
 if(!confirm("すべてリセットしますか？")) return;
-localStorage.clear();
+localStorage.removeItem("mahjongRounds");
+localStorage.removeItem("mahjongChips");
 location.reload();
 }
 
