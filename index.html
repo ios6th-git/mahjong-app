@@ -7,600 +7,352 @@
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-
-body{
-  font-size:20px;
-  font-family:sans-serif;
-  background:#f5f5f5;
-  padding:10px;
-}
-
+body{font-size:20px;font-family:sans-serif;background:#f5f5f5;padding:10px;}
 h3{margin:6px 0 8px;font-size:22px;}
-
-.card{
-  background:#fff;
-  border-radius:10px;
-  padding:6px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1);
-  margin-bottom:10px;
-}
-
-button{
-  font-size:20px;
-  min-height:48px;
-  padding:4px;
-  border:none;
-  border-radius:10px;
-  background:#e8f5e9;
-  color:#2e7d32;
-  box-shadow:0 2px 6px rgba(0,0,0,0.15);
-}
-
+.card{background:#fff;border-radius:10px;padding:6px;box-shadow:0 2px 6px rgba(0,0,0,0.1);margin-bottom:10px;}
+button{font-size:20px;min-height:48px;padding:4px;border:none;border-radius:10px;background:#e8f5e9;color:#2e7d32;box-shadow:0 2px 6px rgba(0,0,0,0.15);}
 button:active{transform:scale(0.96);}
-
-.danger{
-  background:#ffebee;
-  color:#d32f2f;
-}
-
-#playerButtons{
-  display:flex;
-  justify-content:flex-end;
-  gap:6px;
-  margin-bottom:6px;
-}
-
-table{
-  width:100%;
-  table-layout:fixed;
-  border-collapse:separate;
-  border-spacing:0;
-}
-
-th,td{
-  border-right:2px solid #000;
-  border-bottom:2px solid #000;
-  text-align:center;
-}
-
+.danger{background:#ffebee;color:#d32f2f;}
+#playerButtons{display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;}
+table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;}
+th,td{border-right:2px solid #000;border-bottom:2px solid #000;text-align:center;}
 tr:first-child th{border-top:2px solid #000;}
 th:first-child,td:first-child{border-left:2px solid #000;}
-
 #table th,#table td{height:60px;}
-
-th{
-  position:static;
-  background:#fff;
-}
-
-td:first-child{
-  position:sticky;
-  left:0;
-  background:#fff;
-}
-
-input{
-  width:100%;
-  height:100%;
-  font-size:20px;
-  border:none;
-  text-align:center;
-}
-
-.nameLocked{
-  background:#eee;
-  pointer-events:none;
-}
-
+th{position:static;background:#fff;}
+td:first-child{position:sticky;left:0;background:#fff;}
+input{width:100%;height:100%;font-size:20px;border:none;text-align:center;}
+.nameLocked{background:#eee;pointer-events:none;}
 td.lockedCell{background:#e6ffe6;}
-
-td.topScore{
-  background:#ffcdd2 !important;
-}
-
-.rowLine{
-  display:flex;
-  align-items:center;
-  margin-top:6px;
-  gap:6px;
-}
-
+td.topScore{background:#ffcdd2 !important;}
+.rowLine{display:flex;align-items:center;margin-top:6px;gap:6px;}
 .left{justify-content:flex-start;}
 .right{justify-content:flex-end;}
-
-select{
-  font-size:20px;
-  min-height:48px;
-}
+select{font-size:20px;min-height:48px;}
 </style>
 </head>
 
 <body>
 
 <div id="playerButtons">
-  <button onclick="goSetting()">設定</button>
-  <button onclick="saveHistory()">履歴保存</button>
-  <button onclick="goHistory()">履歴</button>
+<button onclick="goSetting()">設定</button>
+<button onclick="saveHistory()">履歴保存</button>
+<button onclick="goHistory()">履歴</button>
 </div>
 
 <div class="card">
-  <h3>点数表</h3>
-  <table id="table"></table>
+<h3>点数表</h3>
+<table id="table"></table>
 </div>
 
 <div class="card">
-
-  <div class="rowLine left">
-    <button onclick="addRound()">行追加</button>
-  </div>
-
-  <div class="rowLine right">
-    <select id="roundDeleteList"></select>
-    <button onclick="deleteSelectedRound()">選択行削除</button>
-  </div>
-
-  <div class="rowLine right">
-    <button onclick="resetRounds()">行リセット</button>
-    <button onclick="resetChips()">チップリセット</button>
-  </div>
-
-  <div class="rowLine right">
-    <button class="danger" onclick="resetAll()">オールリセット</button>
-  </div>
-
+<div class="rowLine left">
+<button onclick="addRound()">行追加</button>
+</div>
+<div class="rowLine right">
+<select id="roundDeleteList"></select>
+<button onclick="deleteSelectedRound()">選択行削除</button>
+</div>
+<div class="rowLine right">
+<button onclick="resetRounds()">行リセット</button>
+<button onclick="resetChips()">チップリセット</button>
+</div>
+<div class="rowLine right">
+<button class="danger" onclick="resetAll()">オールリセット</button>
+</div>
 </div>
 
 <script>
 
-const debugBox = document.createElement("div");
-debugBox.id = "debugBox";
-debugBox.style.position = "fixed";
-debugBox.style.bottom = "0";
-debugBox.style.right = "0";
-debugBox.style.maxHeight = "40%";
-debugBox.style.width = "100%";
-debugBox.style.overflow = "auto";
-debugBox.style.background = "rgba(0,0,0,0.8)";
-debugBox.style.color = "#0f0";
-debugBox.style.fontSize = "12px";
-debugBox.style.zIndex = "9999";
-debugBox.style.padding = "4px";
-debugBox.style.display = "none";
-document.body.appendChild(debugBox);
-
-function debugLog(msg){
-  console.error(msg);
-  debugBox.style.display = "block";
-  const line = document.createElement("div");
-  line.textContent = msg;
-  debugBox.appendChild(line);
-}
-
-window.addEventListener("error", function(e){
-  debugLog("JS Error: "+e.message+" @"+e.lineno);
-});
-
-window.addEventListener("unhandledrejection", function(e){
-  debugLog("Promise Error: "+e.reason);
-});
-
 const NOT_JOIN="__NO__";
-
 let players=[];
 let rounds=[];
 let chips=[];
 
 function saveState(){
-  localStorage.setItem("mahjongRounds", JSON.stringify(rounds));
-  localStorage.setItem("mahjongChips", JSON.stringify(chips));
+localStorage.setItem("mahjongRounds", JSON.stringify(rounds));
+localStorage.setItem("mahjongChips", JSON.stringify(chips));
 }
 
 function loadState(){
-  rounds = JSON.parse(localStorage.getItem("mahjongRounds")||"[]");
-  chips  = JSON.parse(localStorage.getItem("mahjongChips")||"[]");
+rounds = JSON.parse(localStorage.getItem("mahjongRounds")||"[]");
+chips  = JSON.parse(localStorage.getItem("mahjongChips")||"[]");
 }
 
 function loadPlayers(){
-  const saved = JSON.parse(localStorage.getItem("mahjongPlayers") || "[]");
-  players = saved.length ? saved : ["","","",""];
-
-  if(chips.length !== players.length){
-    chips = Array(players.length).fill("");
-  }
-
-  rounds.forEach(r=>{
-    while(r.scores.length < players.length){
-      r.scores.push(r.locked?NOT_JOIN:"");
-    }
-    while(r.scores.length > players.length){
-      r.scores.pop();
-    }
-  });
+const saved = JSON.parse(localStorage.getItem("mahjongPlayers") || "[]");
+players = saved.length ? saved : ["","","",""];
+if(chips.length !== players.length){chips = Array(players.length).fill("");}
+rounds.forEach(r=>{
+while(r.scores.length < players.length){r.scores.push(r.locked?NOT_JOIN:"");}
+while(r.scores.length > players.length){r.scores.pop();}
+});
 }
 
 window.onload=()=>{
-  loadState();
-  loadPlayers();
-
-  if(rounds.length===0){
-    addRound();
-  }else{
-    renderTable();
-  }
+loadState();
+loadPlayers();
+if(rounds.length===0){addRound();}else{renderTable();}
 };
 
 window.addEventListener("focus", ()=>{
-  loadPlayers();
-  renderTable();
+loadPlayers();
+renderTable();
 });
 
-function goSetting(){
-  saveState();
-  window.location.href="player.html";
-}
-function goHistory(){
-  window.location.href="history.html";
-}
+function goSetting(){saveState();window.location.href="player.html";}
+function goHistory(){window.location.href="history.html";}
 
 function saveHistory(){
-  const totals = getTotals();
-  const rate = getChipRate();
-
-  const chipValues = players.map((_,i)=>{
-    if(chips[i]==="±0") return 0;
-    const n = Number(chips[i]||0);
-    return isNaN(n)?0:n;
-  });
-
-  const results = players.map((_,i)=>{
-    return totals[i] + chipValues[i]*rate;
-  });
-
-  const data = {
-    date: new Date().toLocaleString(),
-    players: [...players],
-    totals: totals,
-    chips: chipValues,
-    results: results
-  };
-
-  let history = JSON.parse(localStorage.getItem("mahjongHistory")||"[]");
-
-  history.push(data);
-
-  if(history.length > 10){
-    history.shift();
-  }
-
-  localStorage.setItem("mahjongHistory", JSON.stringify(history));
-
-  alert("履歴保存しました");
+const totals = getTotals();
+const rate = getChipRate();
+const chipValues = players.map((_,i)=>{
+const n = Number(chips[i]||0);
+return isNaN(n)?0:n;
+});
+const results = players.map((_,i)=>{
+return totals[i] + chipValues[i]*rate;
+});
+const data = {date: new Date().toLocaleString(),players: [...players],totals: totals,chips: chipValues,results: results};
+let history = JSON.parse(localStorage.getItem("mahjongHistory")||"[]");
+history.push(data);
+if(history.length > 10){history.shift();}
+localStorage.setItem("mahjongHistory", JSON.stringify(history));
+alert("履歴保存しました");
 }
 
 function addRound(){
-  rounds.push({
-    scores:Array(players.length).fill(""),
-    locked:false
-  });
-  saveState();
-  renderTable();
+rounds.push({scores:Array(players.length).fill(""),locked:false});
+saveState();
+renderTable();
 }
 
 function deleteSelectedRound(){
-  const sel = document.getElementById("roundDeleteList");
-  const i = Number(sel.value);
-  if(!confirm((i+1)+"行削除しますか？")) return;
-
-  rounds.splice(i,1);
-  saveState();
-  renderTable();
+const sel = document.getElementById("roundDeleteList");
+const i = Number(sel.value);
+if(!confirm((i+1)+"行削除しますか？")) return;
+rounds.splice(i,1);
+saveState();
+renderTable();
 }
 
 function resetRounds(){
-  const sel = document.getElementById("roundDeleteList");
-  const i = Number(sel.value);
-  if(!confirm("行リセットしますか？")) return;
-
-  rounds[i].scores=Array(players.length).fill("");
-  rounds[i].locked=false;
-
-  saveState();
-  renderTable();
+const sel = document.getElementById("roundDeleteList");
+const i = Number(sel.value);
+if(!confirm("行リセットしますか？")) return;
+rounds[i].scores=Array(players.length).fill("");
+rounds[i].locked=false;
+saveState();
+renderTable();
 }
 
 function resetChips(){
-  if(!confirm("チップリセットしますか？")) return;
-
-  chips=Array(players.length).fill("");
-  saveState();
-  renderTable();
+if(!confirm("チップリセットしますか？")) return;
+chips=Array(players.length).fill("");
+saveState();
+renderTable();
 }
 
 function resetAll(){
-  if(!confirm("オールリセットしますか？")) return;
-
-  localStorage.removeItem("mahjongRounds");
-  localStorage.removeItem("mahjongChips");
-
-  localStorage.setItem("mahjongPlayers", JSON.stringify(["","","",""]));
-
-  players=["","","",""];
-  chips=["","","",""];
-  rounds=[{scores:["","","",""],locked:false}];
-
-  localStorage.setItem(
-    "mahjongPlayerChecks_draft",
-    JSON.stringify([false,false,false,false])
-  );
-
-  saveState();
-  renderTable();
+if(!confirm("オールリセットしますか？")) return;
+localStorage.removeItem("mahjongRounds");
+localStorage.removeItem("mahjongChips");
+localStorage.setItem("mahjongPlayers", JSON.stringify(["","","",""]));
+players=["","","",""];
+chips=["","","",""];
+rounds=[{scores:["","","",""],locked:false}];
+localStorage.setItem("mahjongPlayerChecks_draft",JSON.stringify([false,false,false,false]));
+saveState();
+renderTable();
 }
 
 function handleAutoFill(ri,i){
-  const r=rounds[ri];
-  if(r.locked) return;
-
-  const nums=r.scores.map(v=>{
-    if(v===""||v===NOT_JOIN) return null;
-    const n=Number(v);
-    return isNaN(n)?null:n;
-  });
-
-  const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
-
-  if(filled.length===3 && r.scores[i]===""){
-    const sum=filled.reduce((a,j)=>a+nums[j],0);
-    r.scores[i]=-sum;
-
-    for(let k=0;k<players.length;k++){
-      if(r.scores[k]==="") r.scores[k]=NOT_JOIN;
-    }
-
-    r.locked=true;
-    saveState();
-    renderTable();
-  }
+const r=rounds[ri];
+if(r.locked) return;
+const nums=r.scores.map(v=>{
+if(v===""||v===NOT_JOIN) return null;
+const n=Number(v);
+return isNaN(n)?null:n;
+});
+const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
+if(filled.length===3 && r.scores[i]===""){
+const sum=filled.reduce((a,j)=>a+nums[j],0);
+r.scores[i]=-sum;
+for(let k=0;k<players.length;k++){if(r.scores[k]==="") r.scores[k]=NOT_JOIN;}
+r.locked=true;
+saveState();
+renderTable();
+}
 }
 
 function handleChipAutoFill(i){
-  const nums=chips.map(v=>{
-    if(v==="") return null;
-    if(v==="±0") return 0;
-    const n=Number(v);
-    return isNaN(n)?null:n;
-  });
-
-  const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
-
-  if(filled.length===players.length-1 && chips[i]===""){
-    const sum=filled.reduce((a,j)=>a+nums[j],0);
-    const val=-sum;
-    chips[i]=(val===0)?"±0":val;
-    saveState();
-    renderTable();
-  }
+const nums=chips.map(v=>{
+if(v==="") return null;
+const n=Number(v);
+return isNaN(n)?null:n;
+});
+const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
+if(filled.length===players.length-1 && chips[i]===""){
+const sum=filled.reduce((a,j)=>a+nums[j],0);
+const val=-sum;
+chips[i]=val;
+saveState();
+renderTable();
+}
 }
 
 function getTotals(){
-  const totals=Array(players.length).fill(0);
-
-  rounds.forEach(r=>{
-    players.forEach((_,i)=>{
-      const v=r.scores[i];
-      if(v!==""&&v!==NOT_JOIN){
-        const n=Number(v);
-        if(!isNaN(n)) totals[i]+=n;
-      }
-    });
-  });
-
-  return totals;
+const totals=Array(players.length).fill(0);
+rounds.forEach(r=>{
+players.forEach((_,i)=>{
+const v=r.scores[i];
+if(v!==""&&v!==NOT_JOIN){
+const n=Number(v);
+if(!isNaN(n)) totals[i]+=n;
+}
+});
+});
+return totals;
 }
 
 function getChipRate(){
-  const n=Number(localStorage.getItem("mahjongChipRate_draft")||0);
-  return isNaN(n)?0:n;
+const n=Number(localStorage.getItem("mahjongChipRate_draft")||0);
+return isNaN(n)?0:n;
 }
 
 function scrollToBottomNames(){
-  setTimeout(()=>{
-    const el=document.getElementById("bottomNamesRow");
-    if(el) el.scrollIntoView({block:"end"});
-  },300);
+setTimeout(()=>{
+const el=document.getElementById("bottomNamesRow");
+if(el) el.scrollIntoView({block:"end"});
+},300);
 }
 
 function renderTable(){
-  const table=document.getElementById("table");
-  table.innerHTML="";
+const table=document.getElementById("table");
+table.innerHTML="";
 
-  const header=document.createElement("tr");
-  header.appendChild(document.createElement("th"));
+const header=document.createElement("tr");
+header.appendChild(document.createElement("th"));
 
-  players.forEach((p,i)=>{
-    const th=document.createElement("th");
-    const inp=document.createElement("input");
-    inp.value=p;
-    inp.readOnly=true;
-    inp.classList.add("nameLocked");
-    th.appendChild(inp);
-    header.appendChild(th);
-  });
-  table.appendChild(header);
+players.forEach((p,i)=>{
+const th=document.createElement("th");
+const inp=document.createElement("input");
+inp.value=p;
+inp.readOnly=true;
+inp.classList.add("nameLocked");
+th.appendChild(inp);
+header.appendChild(th);
+});
+table.appendChild(header);
 
-  rounds.forEach((r,ri)=>{
-    const tr=document.createElement("tr");
-    tr.appendChild(Object.assign(document.createElement("td"),{innerText:ri+1}));
+rounds.forEach((r,ri)=>{
+const tr=document.createElement("tr");
+tr.appendChild(Object.assign(document.createElement("td"),{innerText:ri+1}));
 
-    let max = -Infinity;
-    if(r.locked){
-      r.scores.forEach(v=>{
-        if(v!=="" && v!==NOT_JOIN){
-          const n=Number(v);
-          if(!isNaN(n)) max=Math.max(max,n);
-        }
-      });
-    }
-
-    players.forEach((_,i)=>{
-      const td=document.createElement("td");
-      const inp=document.createElement("input");
-
-      inp.value=(r.scores[i]===NOT_JOIN?"不参加":r.scores[i]);
-      inp.setAttribute("inputmode","numeric");
-
-      if(r.locked){
-        td.classList.add("lockedCell");
-
-        if(Number(r.scores[i])===max){
-          td.classList.add("topScore");
-        }
-
-        inp.disabled=true;
-      }else{
-        inp.onfocus=()=>{handleAutoFill(ri,i);scrollToBottomNames();};
-        inp.onclick=()=>{handleAutoFill(ri,i);scrollToBottomNames();};
-        inp.oninput=e=>{
-          const val=e.target.value.trim();
-          r.scores[i]=(val==="不参加")?NOT_JOIN:val;
-          saveState();
-        };
-      }
-
-      td.appendChild(inp);
-      tr.appendChild(td);
-    });
-
-    table.appendChild(tr);
-  });
-
-  const totals=getTotals();
-  const rate=getChipRate();
-
-  const tr=document.createElement("tr");
-  tr.appendChild(Object.assign(document.createElement("td"),{innerText:"合計"}));
-
-  totals.forEach(v=>{
-    const td=document.createElement("td");
-    td.innerText=v;
-    tr.appendChild(td);
-  });
-  table.appendChild(tr);
-
-  const chipRow=document.createElement("tr");
-  chipRow.appendChild(Object.assign(document.createElement("td"),{innerText:"チップ"}));
-
-  players.forEach((_,i)=>{
-    const td=document.createElement("td");
-    const inp=document.createElement("input");
-
-    inp.value=chips[i]||"";
-    inp.setAttribute("inputmode","numeric");
-
-    inp.onfocus=()=>{handleChipAutoFill(i);scrollToBottomNames();};
-    inp.onclick=()=>{handleChipAutoFill(i);scrollToBottomNames();};
-
-    inp.oninput=e=>{
-      chips[i]=e.target.value;
-      saveState();
-    };
-
-    td.appendChild(inp);
-    chipRow.appendChild(td);
-  });
-
-  table.appendChild(chipRow);
-
-  const resultRow=document.createElement("tr");
-  resultRow.appendChild(Object.assign(document.createElement("td"),{innerText:"結果"}));
-
-  players.forEach((_,i)=>{
-    const td=document.createElement("td");
-    const chip = chips[i]==="±0"?0:Number(chips[i]||0);
-    td.innerText = totals[i] + chip*rate;
-    resultRow.appendChild(td);
-  });
-
-  table.appendChild(resultRow);
-
-  const bottomRow=document.createElement("tr");
-  bottomRow.id="bottomNamesRow";
-  bottomRow.appendChild(document.createElement("td"));
-
-  players.forEach((p)=>{
-    const td=document.createElement("td");
-    const inp=document.createElement("input");
-    inp.value=p;
-    inp.readOnly=true;
-    inp.classList.add("nameLocked");
-    td.appendChild(inp);
-    bottomRow.appendChild(td);
-  });
-
-  table.appendChild(bottomRow);
-
-  const sel=document.getElementById("roundDeleteList");
-  sel.innerHTML="";
-
-  rounds.forEach((_,i)=>{
-    const op=document.createElement("option");
-    op.value=i;
-    op.textContent=(i+1)+"行目";
-    sel.appendChild(op);
-  });
-
-  if(rounds.length>0){
-    sel.value=rounds.length-1;
-  }
+let max = -Infinity;
+if(r.locked){
+r.scores.forEach(v=>{
+if(v!=="" && v!==NOT_JOIN){
+const n=Number(v);
+if(!isNaN(n)) max=Math.max(max,n);
+}
+});
 }
 
-(function(){
+players.forEach((_,i)=>{
+const td=document.createElement("td");
+const inp=document.createElement("input");
+inp.value=(r.scores[i]===NOT_JOIN?"不参加":r.scores[i]);
+inp.setAttribute("inputmode","numeric");
 
-document.addEventListener("input",function(e){
-  const t=e.target;
-  if(t.tagName!=="INPUT") return;
-  if(!t.closest("#table")) return;
+if(r.locked){
+td.classList.add("lockedCell");
+if(Number(r.scores[i])===max){td.classList.add("topScore");}
+inp.disabled=true;
+}else{
+inp.onfocus=()=>{handleAutoFill(ri,i);scrollToBottomNames();};
+inp.onclick=()=>{handleAutoFill(ri,i);scrollToBottomNames();};
+inp.oninput=e=>{
+const val=e.target.value.trim();
+r.scores[i]=(val==="不参加")?NOT_JOIN:val;
+saveState();
+};
+}
 
-  let v=t.value;
-  if(v==="") return;
-
-  v=v.replace(/[^0-9\-]/g,"");
-  if(v.indexOf("-")>0){
-    v=v.replace(/-/g,"");
-  }
-
-  t.value=v;
+td.appendChild(inp);
+tr.appendChild(td);
+});
+table.appendChild(tr);
 });
 
-const oldRender = renderTable;
-renderTable = function(){
-  try{
-    oldRender();
-    controlResult();
-  }catch(e){
-    debugLog("renderTable crash: "+e.message);
-  }
+const totals=getTotals();
+const rate=getChipRate();
+
+const tr=document.createElement("tr");
+tr.appendChild(Object.assign(document.createElement("td"),{innerText:"合計"}));
+totals.forEach(v=>{
+const td=document.createElement("td");
+td.innerText=v;
+tr.appendChild(td);
+});
+table.appendChild(tr);
+
+const chipRow=document.createElement("tr");
+chipRow.appendChild(Object.assign(document.createElement("td"),{innerText:"チップ"}));
+
+players.forEach((_,i)=>{
+const td=document.createElement("td");
+const inp=document.createElement("input");
+inp.value=chips[i]||"";
+inp.setAttribute("inputmode","numeric");
+inp.onfocus=()=>{handleChipAutoFill(i);scrollToBottomNames();};
+inp.onclick=()=>{handleChipAutoFill(i);scrollToBottomNames();};
+inp.oninput=e=>{
+chips[i]=e.target.value;
+saveState();
 };
+td.appendChild(inp);
+chipRow.appendChild(td);
+});
+table.appendChild(chipRow);
 
-function controlResult(){
-  const rows=document.querySelectorAll("#table tr");
-  if(rows.length<3) return;
+const resultRow=document.createElement("tr");
+resultRow.appendChild(Object.assign(document.createElement("td"),{innerText:"結果"}));
 
-  const resultRow = rows[rows.length-2];
-  const chipRow   = rows[rows.length-3];
+players.forEach((_,i)=>{
+const td=document.createElement("td");
+const chip = Number(chips[i]||0);
+td.innerText = totals[i] + chip*rate;
+resultRow.appendChild(td);
+});
 
-  const inputs = chipRow.querySelectorAll("input");
+table.appendChild(resultRow);
 
-  const filled=[...inputs].every(inp=>inp.value!=="" && inp.value!=null);
+const bottomRow=document.createElement("tr");
+bottomRow.id="bottomNamesRow";
+bottomRow.appendChild(document.createElement("td"));
 
-  if(!filled){
-    resultRow.querySelectorAll("td").forEach((td,i)=>{
-      if(i!==0) td.innerText="";
-    });
-  }
+players.forEach((p)=>{
+const td=document.createElement("td");
+const inp=document.createElement("input");
+inp.value=p;
+inp.readOnly=true;
+inp.classList.add("nameLocked");
+td.appendChild(inp);
+bottomRow.appendChild(td);
+});
+table.appendChild(bottomRow);
+
+const sel=document.getElementById("roundDeleteList");
+sel.innerHTML="";
+rounds.forEach((_,i)=>{
+const op=document.createElement("option");
+op.value=i;
+op.textContent=(i+1)+"行目";
+sel.appendChild(op);
+});
+if(rounds.length>0){sel.value=rounds.length-1;}
 }
-
-})();
 
 </script>
 </body>
