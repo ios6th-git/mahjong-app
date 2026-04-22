@@ -265,7 +265,7 @@ function deleteSelectedRound(){
 
 function resetRounds(){
   const i=Number(roundDeleteList.value);
-  if(!confirm("リセットしますか？")) return;
+  if(!confirm("行リセットしますか？")) return;
 
   rounds[i].scores=Array(players.length).fill("");
   rounds[i].locked=false;
@@ -283,7 +283,7 @@ function resetChips(){
 }
 
 function resetAll(){
-  if(!confirm("全リセットしますか？")) return;
+  if(!confirm("オールリセットしますか？")) return;
 
   localStorage.removeItem("mahjongRounds");
   localStorage.removeItem("mahjongChips");
