@@ -174,7 +174,6 @@ button{
 let players = [];
 let checks = [];
 let locks = [];
-
 let dragIndex = null;
 
 window.onload = () => {
@@ -198,6 +197,8 @@ window.onload = () => {
 
   document.getElementById("chipRateInput").value =
     localStorage.getItem("mahjongChipRate_draft") || "";
+
+  document.getElementById("chipRateInput").placeholder = "";
 
   renderPlayers();
   updateRegisteredPlayers();
@@ -223,24 +224,22 @@ function renderPlayers(){
     const row = document.createElement("div");
     row.className = "row";
 
-    // ★ ドラッグ追加
     row.draggable = locks[i];
 
-    row.ondragstart = () => {
+    row.ondragstart = ()=>{
       dragIndex = i;
     };
 
-    row.ondragover = (e) => {
+    row.ondragover = (e)=>{
       e.preventDefault();
     };
 
-    row.ondrop = () => {
+    row.ondrop = ()=>{
       if(dragIndex === null || dragIndex === i) return;
 
       const move = (arr)=>{
-        const temp = arr[dragIndex];
-        arr.splice(dragIndex,1);
-        arr.splice(i,0,temp);
+        const item = arr.splice(dragIndex,1)[0];
+        arr.splice(i,0,item);
       };
 
       move(players);
@@ -248,9 +247,8 @@ function renderPlayers(){
       move(locks);
 
       dragIndex = null;
-
-      updateRegisteredPlayers();
       renderPlayers();
+      updateRegisteredPlayers();
     };
 
     const inp = document.createElement("input");
@@ -313,7 +311,8 @@ function focusLastInput(){
 
   const last = inputs[inputs.length - 1];
 
-  last.scrollIntoView({ behavior:"smooth", block:"nearest" }); // ★追加
+  last.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
   last.focus();
   last.classList.add("focused");
 
@@ -343,8 +342,7 @@ function savePlayers(){
   localStorage.setItem("mahjongPlayerChecks_draft", JSON.stringify(checks));
   localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
 
-  const raw = document.getElementById("chipRateInput").value;
-  const rate = raw.trim() === "" ? "" : raw.trim(); // ★修正
+  const rate = document.getElementById("chipRateInput").value.trim();
   localStorage.setItem("mahjongChipRate_draft", rate);
 
   window.location.href = "index.html";
