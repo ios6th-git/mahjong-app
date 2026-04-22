@@ -76,10 +76,10 @@ select:document.getElementById("roundDeleteList"),
 table:document.getElementById("table")
 };
 
-/* ===== 初期 ===== */
 window.onload=()=>{
 load();
 init();
+setupInputBehavior(); // ★入力仕様ここで有効化
 };
 
 window.addEventListener("focus",()=>{
@@ -112,7 +112,7 @@ localStorage.setItem("mahjongRounds",JSON.stringify(rounds));
 localStorage.setItem("mahjongChips",JSON.stringify(chips));
 }
 
-/* ===== 初回DOM ===== */
+/* ===== 初期DOM ===== */
 function init(){
 createHeader();
 rounds.forEach((r,i)=>createRound(i));
@@ -145,9 +145,7 @@ ui.table.appendChild(tr);
 /* ===== ラウンド ===== */
 function createRound(i){
 const r=rounds[i];
-
 const tr=document.createElement("tr");
-tr.dataset.index=i;
 
 tr.appendChild(Object.assign(document.createElement("td"),{innerText:i+1}));
 
@@ -157,6 +155,8 @@ players.forEach((_,pi)=>{
 const td=document.createElement("td");
 const inp=document.createElement("input");
 
+inp.setAttribute("inputmode","numeric");
+
 inp.addEventListener("input",e=>{
 r.scores[pi]=normalize(e.target.value);
 autoFill(i,pi);
@@ -164,7 +164,15 @@ save();
 refreshAll();
 });
 
-inp.addEventListener("focus",()=>{autoFill(i,pi);scrollToBottomNames();});
+inp.addEventListener("focus",()=>{
+autoFill(i,pi);
+scrollToBottomNames();
+});
+
+inp.addEventListener("click",()=>{
+autoFill(i,pi);
+scrollToBottomNames();
+});
 
 td.appendChild(inp);
 tr.appendChild(td);
@@ -175,7 +183,7 @@ ui.table.appendChild(tr);
 ui.rows.push(row);
 }
 
-/* ===== 正規化 ===== */
+/* ===== normalize ===== */
 function normalize(v){
 if(v==="不参加") return NOT_JOIN;
 v=v.replace(/[^0-9\-]/g,"");
@@ -209,11 +217,46 @@ save();
 }
 }
 
+/* ===== チップ ===== */
+function createChipRow(){
+const tr=document.createElement("tr");
+tr.appendChild(Object.assign(document.createElement("td"),{innerText:"チップ"}));
+
+players.forEach((_,i)=>{
+const td=document.createElement("td");
+const inp=document.createElement("input");
+
+inp.setAttribute("inputmode","numeric");
+
+inp.addEventListener("input",e=>{
+chips[i]=normalize(e.target.value);
+chipAutoFill(i);
+save();
+refreshAll();
+});
+
+inp.addEventListener("focus",()=>{
+chipAutoFill(i);
+scrollToBottomNames();
+});
+
+inp.addEventListener("click",()=>{
+chipAutoFill(i);
+scrollToBottomNames();
+});
+
+td.appendChild(inp);
+tr.appendChild(td);
+ui.chipInputs.push(inp);
+});
+
+ui.table.appendChild(tr);
+}
+
 /* ===== チップautoFill ===== */
 function chipAutoFill(i){
 const nums=chips.map(v=>{
 if(v==="") return null;
-if(v==="±0") return 0;
 const n=Number(v);
 return isNaN(n)?null:n;
 });
@@ -222,8 +265,7 @@ const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
 
 if(filled.length===players.length-1 && chips[i]===""){
 const sum=filled.reduce((a,j)=>a+nums[j],0);
-const val=-sum;
-chips[i]=(val===0)?"±0":String(val);
+chips[i]=String(-sum);
 save();
 }
 }
@@ -237,32 +279,6 @@ players.forEach(()=>{
 const td=document.createElement("td");
 ui.totalCells.push(td);
 tr.appendChild(td);
-});
-
-ui.table.appendChild(tr);
-}
-
-/* ===== チップ ===== */
-function createChipRow(){
-const tr=document.createElement("tr");
-tr.appendChild(Object.assign(document.createElement("td"),{innerText:"チップ"}));
-
-players.forEach((_,i)=>{
-const td=document.createElement("td");
-const inp=document.createElement("input");
-
-inp.addEventListener("input",e=>{
-chips[i]=normalize(e.target.value);
-chipAutoFill(i);
-save();
-refreshAll();
-});
-
-inp.addEventListener("focus",()=>{chipAutoFill(i);scrollToBottomNames();});
-
-td.appendChild(inp);
-tr.appendChild(td);
-ui.chipInputs.push(inp);
 });
 
 ui.table.appendChild(tr);
@@ -303,7 +319,6 @@ ui.table.appendChild(tr);
 
 /* ===== 更新 ===== */
 function refreshAll(){
-
 ui.rows.forEach((r,i)=>{
 const data=rounds[i];
 
@@ -323,7 +338,6 @@ c.inp.value=(v===NOT_JOIN?"不参加":v||"");
 
 c.td.classList.toggle("lockedCell",data.locked);
 c.inp.disabled=data.locked;
-
 c.td.classList.toggle("topScore",Number(v)===max && data.locked);
 });
 });
@@ -356,12 +370,12 @@ ui.totalCells[i].innerText=v;
 const rate=Number(localStorage.getItem("mahjongChipRate_draft")||0);
 
 totals.forEach((v,i)=>{
-const chip = chips[i]==="±0"?0:Number(chips[i]||0);
+const chip = Number(chips[i]||0);
 ui.resultCells[i].innerText=v + chip*rate;
 });
 }
 
-/* ===== controlResult ===== */
+/* ===== 結果欄制御 ===== */
 function controlResult(){
 const filled=ui.chipInputs.every(inp=>inp.value!==""&&inp.value!=null);
 
@@ -370,12 +384,31 @@ ui.resultCells.forEach(td=>td.innerText="");
 }
 }
 
-/* ===== scroll ===== */
+/* ===== スクロール ===== */
 function scrollToBottomNames(){
 setTimeout(()=>{
 const el=document.getElementById("bottomNamesRow");
 if(el) el.scrollIntoView({block:"end"});
 },300);
+}
+
+/* ===== 入力制限（元仕様） ===== */
+function setupInputBehavior(){
+document.addEventListener("input",function(e){
+const t=e.target;
+if(t.tagName!=="INPUT") return;
+if(!t.closest("#table")) return;
+
+let v=t.value;
+if(v==="不参加") return;
+if(v==="") return;
+
+v=v.replace(/[^0-9\-]/g,"");
+if(v.indexOf("-")>0){
+v=v.replace(/-/g,"");
+}
+t.value=v;
+});
 }
 
 /* ===== 操作 ===== */
