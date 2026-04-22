@@ -137,6 +137,10 @@ button{
   padding:6px;
 }
 
+#chipRateInput{
+  inputmode: numeric;
+}
+
 #bottomArea button{
   width:100%;
   margin-top:6px;
@@ -149,8 +153,8 @@ button{
 <h2>プレイヤー設定</h2>
 
 <div id="topButtons">
-  <button id="addBtn">名前追加</button>
-  <button id="resetBtn">プレイヤーリセット</button>
+  <button onclick="addPlayer()">名前追加</button>
+  <button onclick="resetChecks()">プレイヤーリセット</button>
 </div>
 
 <div id="playerList"></div>
@@ -162,147 +166,189 @@ button{
 <input type="text" id="chipRateInput" placeholder="チップレート" inputmode="numeric">
 
 <div id="bottomArea">
-  <button id="saveBtn">保存</button>
+  <button onclick="savePlayers()">保存</button>
 </div>
 
 <script>
 
-const state = {
-  rows: []
-};
+let players = [];
+let checks = [];
+let locks = [];
 
-function createRow(data = {name:"", checked:false, locked:false}){
+let dragIndex = null;
 
-  const row = document.createElement("div");
-  row.className = "row";
+window.onload = () => {
 
-  const inp = document.createElement("input");
-  inp.className = "inputBox";
-  inp.value = data.name;
+  players = JSON.parse(localStorage.getItem("mahjongPlayers_draft") || "[]");
+  checks  = JSON.parse(localStorage.getItem("mahjongPlayerChecks_draft") || "[]");
+  locks = JSON.parse(localStorage.getItem("mahjongPlayerLocks") || "[]");
 
-  const editBtn = document.createElement("button");
-  editBtn.className = "smallBtn";
-
-  const delBtn = document.createElement("button");
-  delBtn.className = "smallBtn danger";
-  delBtn.textContent = "削除";
-
-  const chkBtn = document.createElement("div");
-  chkBtn.className = "checkBtn";
-
-  const obj = {row, inp, editBtn, delBtn, chkBtn, ...data};
-
-  function updateUI(){
-    inp.value = obj.name;
-    inp.readOnly = obj.locked;
-
-    inp.classList.toggle("locked", obj.locked);
-
-    editBtn.textContent = obj.locked ? "編集" : "確定";
-
-    chkBtn.classList.toggle("active", obj.checked);
+  if(players.length === 0){
+    players = ["","","",""];
+    checks  = [false,false,false,false];
   }
 
-  inp.addEventListener("input", e=>{
-    obj.name = e.target.value;
-    updateRegisteredPlayers();
-  });
+  while(checks.length < players.length){
+    checks.push(false);
+  }
 
-  editBtn.addEventListener("click", ()=>{
-    obj.locked = !obj.locked;
-    saveLocks();
-    updateUI();
-  });
+  while(locks.length < players.length){
+    locks.push(false);
+  }
 
-  delBtn.addEventListener("click", ()=>{
-    if(!confirm("削除しますか？")) return;
-    row.remove();
-    state.rows = state.rows.filter(r => r !== obj);
-    saveLocks();
-    updateRegisteredPlayers();
-  });
+  document.getElementById("chipRateInput").value =
+    localStorage.getItem("mahjongChipRate_draft") || "";
 
-  chkBtn.addEventListener("click", ()=>{
-    obj.checked = !obj.checked;
-    updateRegisteredPlayers();
-    updateUI();
-  });
-
-  row.appendChild(inp);
-  row.appendChild(editBtn);
-  row.appendChild(delBtn);
-  row.appendChild(chkBtn);
-
-  document.getElementById("playerList").appendChild(row);
-
-  updateUI();
-
-  state.rows.push(obj);
-}
+  renderPlayers();
+  updateRegisteredPlayers();
+};
 
 function updateRegisteredPlayers(){
-  const selected = state.rows
-    .filter(r => r.checked && r.name.trim() !== "")
-    .map(r => r.name.trim());
+  const selected = [];
+
+  players.forEach((p,i)=>{
+    const name = (p || "").trim();
+    if(checks[i] && name !== "") selected.push(name);
+  });
 
   localStorage.setItem("mahjongPlayers", JSON.stringify(selected));
 }
 
-function saveLocks(){
-  const locks = state.rows.map(r=>r.locked);
-  localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
-}
-
-function load(){
-  let players = JSON.parse(localStorage.getItem("mahjongPlayers_draft") || "[]");
-  let checks  = JSON.parse(localStorage.getItem("mahjongPlayerChecks_draft") || "[]");
-  let locks   = JSON.parse(localStorage.getItem("mahjongPlayerLocks") || "[]");
-
-  if(players.length === 0){
-    players = ["","","",""];
-    checks = [false,false,false,false];
-  }
+function renderPlayers(){
+  const div = document.getElementById("playerList");
+  div.innerHTML = "";
 
   players.forEach((p,i)=>{
-    createRow({
-      name:p,
-      checked:checks[i] || false,
-      locked:locks[i] || false
-    });
-  });
 
-  document.getElementById("chipRateInput").value =
-    localStorage.getItem("mahjongChipRate_draft") || "";
+    const row = document.createElement("div");
+    row.className = "row";
+
+    // ★ ドラッグ追加
+    row.draggable = locks[i];
+
+    row.ondragstart = () => {
+      dragIndex = i;
+    };
+
+    row.ondragover = (e) => {
+      e.preventDefault();
+    };
+
+    row.ondrop = () => {
+      if(dragIndex === null || dragIndex === i) return;
+
+      const move = (arr)=>{
+        const temp = arr[dragIndex];
+        arr.splice(dragIndex,1);
+        arr.splice(i,0,temp);
+      };
+
+      move(players);
+      move(checks);
+      move(locks);
+
+      dragIndex = null;
+
+      updateRegisteredPlayers();
+      renderPlayers();
+    };
+
+    const inp = document.createElement("input");
+    inp.className = "inputBox" + (locks[i] ? " locked" : "");
+    inp.value = p;
+    inp.readOnly = locks[i];
+
+    inp.oninput = e => {
+      players[i] = e.target.value;
+      updateRegisteredPlayers();
+    };
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "smallBtn";
+    editBtn.textContent = locks[i] ? "編集" : "確定";
+
+    editBtn.onclick = ()=>{
+      locks[i] = !locks[i];
+      localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
+      renderPlayers();
+    };
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "smallBtn danger";
+    delBtn.textContent = "削除";
+
+    delBtn.onclick = ()=>{
+      if(!confirm("削除しますか？")) return;
+      players.splice(i,1);
+      checks.splice(i,1);
+      locks.splice(i,1);
+
+      localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
+
+      updateRegisteredPlayers();
+      renderPlayers();
+    };
+
+    const chkBtn = document.createElement("div");
+    chkBtn.className = "checkBtn" + (checks[i] ? " active" : "");
+
+    chkBtn.onclick = ()=>{
+      checks[i] = !checks[i];
+      updateRegisteredPlayers();
+      renderPlayers();
+    };
+
+    row.appendChild(inp);
+    row.appendChild(editBtn);
+    row.appendChild(delBtn);
+    row.appendChild(chkBtn);
+
+    div.appendChild(row);
+  });
 }
 
-document.getElementById("addBtn").onclick = ()=>{
-  createRow();
-};
+function focusLastInput(){
+  const inputs = document.querySelectorAll(".inputBox:not(.locked)");
+  if(inputs.length === 0) return;
 
-document.getElementById("resetBtn").onclick = ()=>{
+  const last = inputs[inputs.length - 1];
+
+  last.scrollIntoView({ behavior:"smooth", block:"nearest" }); // ★追加
+  last.focus();
+  last.classList.add("focused");
+
+  setTimeout(()=>{
+    last.classList.remove("focused");
+  }, 800);
+}
+
+function addPlayer(){
+  players.push("");
+  checks.push(false);
+  locks.push(false);
+
+  renderPlayers();
+  setTimeout(focusLastInput, 0);
+}
+
+function resetChecks(){
   if(!confirm("チェックを全て外しますか？")) return;
-  state.rows.forEach(r=>{
-    r.checked = false;
-    r.chkBtn.classList.remove("active");
-  });
+  checks = checks.map(()=>false);
   updateRegisteredPlayers();
-};
+  renderPlayers();
+}
 
-document.getElementById("saveBtn").onclick = ()=>{
-  const players = state.rows.map(r=>r.name);
-  const checks = state.rows.map(r=>r.checked);
-
+function savePlayers(){
   localStorage.setItem("mahjongPlayers_draft", JSON.stringify(players));
   localStorage.setItem("mahjongPlayerChecks_draft", JSON.stringify(checks));
-  saveLocks();
+  localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
 
-  const rate = document.getElementById("chipRateInput").value.trim();
+  const raw = document.getElementById("chipRateInput").value;
+  const rate = raw.trim() === "" ? "" : raw.trim(); // ★修正
   localStorage.setItem("mahjongChipRate_draft", rate);
 
   window.location.href = "index.html";
-};
-
-window.onload = load;
+}
 
 </script>
 </body>
