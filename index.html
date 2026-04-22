@@ -210,7 +210,7 @@ return isNaN(n)?null:n;
 
 const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
 
-if(filled.length===players.length-1 && r.scores[i]===""){
+if(filled.length===players.length-1 && (r.scores[i]==="" || r.scores[i]===null)){
 const sum=filled.reduce((a,j)=>a+nums[j],0);
 r.scores[i]=-sum;
 
@@ -269,7 +269,7 @@ return isNaN(n)?null:n;
 
 const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
 
-if(filled.length===players.length-1 && chips[i]===""){
+if(filled.length===players.length-1 && (chips[i]==="" || chips[i]===null)){
 const sum=filled.reduce((a,j)=>a+nums[j],0);
 chips[i]=String(-sum);
 save();
@@ -344,7 +344,9 @@ c.inp.value=(v===NOT_JOIN?"不参加":v||"");
 
 c.td.classList.toggle("lockedCell",data.locked);
 c.inp.disabled=data.locked;
-c.td.classList.toggle("topScore",Number(v)===max && data.locked);
+
+const num = (v!=="" && v!==NOT_JOIN) ? Number(v) : null;
+c.td.classList.toggle("topScore", num!==null && num===max && data.locked);
 });
 });
 
