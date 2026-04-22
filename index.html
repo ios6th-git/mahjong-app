@@ -72,9 +72,11 @@ rows:[],
 totalCells:[],
 chipInputs:[],
 resultCells:[],
-select:document.getElementById("roundDeleteList")
+select:document.getElementById("roundDeleteList"),
+table:document.getElementById("table")
 };
 
+/* ===== 初期 ===== */
 window.onload=()=>{
 load();
 init();
@@ -110,12 +112,22 @@ localStorage.setItem("mahjongRounds",JSON.stringify(rounds));
 localStorage.setItem("mahjongChips",JSON.stringify(chips));
 }
 
-/* ===== 初期DOM ===== */
+/* ===== 初回DOM ===== */
 function init(){
-const table=document.getElementById("table");
+createHeader();
+rounds.forEach((r,i)=>createRound(i));
+createTotalRow();
+createChipRow();
+createResultRow();
+createBottomNames();
+updateSelect();
+refreshAll();
+}
 
-const header=document.createElement("tr");
-header.appendChild(document.createElement("th"));
+/* ===== ヘッダ ===== */
+function createHeader(){
+const tr=document.createElement("tr");
+tr.appendChild(document.createElement("th"));
 
 players.forEach(p=>{
 const th=document.createElement("th");
@@ -124,53 +136,51 @@ inp.value=p;
 inp.readOnly=true;
 inp.className="nameLocked";
 th.appendChild(inp);
-header.appendChild(th);
+tr.appendChild(th);
 });
-table.appendChild(header);
 
-rounds.forEach((r,i)=>addRoundDOM(i));
-
-createTotalRow();
-createChipRow();
-createResultRow();
-createBottom();
-
-updateSelect();
-refreshAll();
+ui.table.appendChild(tr);
 }
 
-/* ===== 行 ===== */
-function addRoundDOM(i){
-const table=document.getElementById("table");
+/* ===== ラウンド ===== */
+function createRound(i){
+const r=rounds[i];
 
 const tr=document.createElement("tr");
 tr.dataset.index=i;
 
 tr.appendChild(Object.assign(document.createElement("td"),{innerText:i+1}));
 
-const rowObj={cells:[],locked:false};
+const row={cells:[]};
 
 players.forEach((_,pi)=>{
 const td=document.createElement("td");
 const inp=document.createElement("input");
 
 inp.addEventListener("input",e=>{
-rounds[i].scores[pi]=sanitize(e.target.value);
+r.scores[pi]=normalize(e.target.value);
 autoFill(i,pi);
 save();
-updateTotals();
+refreshAll();
 });
 
-inp.addEventListener("focus",()=>autoFill(i,pi));
+inp.addEventListener("focus",()=>{autoFill(i,pi);scrollToBottomNames();});
 
 td.appendChild(inp);
 tr.appendChild(td);
-
-rowObj.cells.push({td,inp});
+row.cells.push({td,inp});
 });
 
-document.getElementById("table").appendChild(tr);
-ui.rows.push(rowObj);
+ui.table.appendChild(tr);
+ui.rows.push(row);
+}
+
+/* ===== 正規化 ===== */
+function normalize(v){
+if(v==="不参加") return NOT_JOIN;
+v=v.replace(/[^0-9\-]/g,"");
+if(v.indexOf("-")>0) v=v.replace(/-/g,"");
+return v;
 }
 
 /* ===== autoFill ===== */
@@ -189,15 +199,33 @@ const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
 if(filled.length===players.length-1 && r.scores[i]===""){
 const sum=filled.reduce((a,j)=>a+nums[j],0);
 r.scores[i]=-sum;
+
+for(let k=0;k<players.length;k++){
+if(r.scores[k]==="") r.scores[k]=NOT_JOIN;
+}
+
 r.locked=true;
+save();
 }
 }
 
-/* ===== sanitize ===== */
-function sanitize(v){
-v=v.replace(/[^0-9\-]/g,"");
-if(v.indexOf("-")>0) v=v.replace(/-/g,"");
-return v;
+/* ===== チップautoFill ===== */
+function chipAutoFill(i){
+const nums=chips.map(v=>{
+if(v==="") return null;
+if(v==="±0") return 0;
+const n=Number(v);
+return isNaN(n)?null:n;
+});
+
+const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
+
+if(filled.length===players.length-1 && chips[i]===""){
+const sum=filled.reduce((a,j)=>a+nums[j],0);
+const val=-sum;
+chips[i]=(val===0)?"±0":String(val);
+save();
+}
 }
 
 /* ===== 合計 ===== */
@@ -211,7 +239,7 @@ ui.totalCells.push(td);
 tr.appendChild(td);
 });
 
-document.getElementById("table").appendChild(tr);
+ui.table.appendChild(tr);
 }
 
 /* ===== チップ ===== */
@@ -224,36 +252,20 @@ const td=document.createElement("td");
 const inp=document.createElement("input");
 
 inp.addEventListener("input",e=>{
-chips[i]=sanitize(e.target.value);
+chips[i]=normalize(e.target.value);
 chipAutoFill(i);
 save();
-updateTotals();
+refreshAll();
 });
 
-inp.addEventListener("focus",()=>chipAutoFill(i));
+inp.addEventListener("focus",()=>{chipAutoFill(i);scrollToBottomNames();});
 
 td.appendChild(inp);
 tr.appendChild(td);
 ui.chipInputs.push(inp);
 });
 
-document.getElementById("table").appendChild(tr);
-}
-
-/* ===== チップautoFill ===== */
-function chipAutoFill(i){
-const nums=chips.map(v=>{
-if(v==="")return null;
-const n=Number(v);
-return isNaN(n)?null:n;
-});
-
-const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
-
-if(filled.length===players.length-1 && chips[i]===""){
-const sum=filled.reduce((a,j)=>a+nums[j],0);
-chips[i]=String(-sum);
-}
+ui.table.appendChild(tr);
 }
 
 /* ===== 結果 ===== */
@@ -267,12 +279,13 @@ ui.resultCells.push(td);
 tr.appendChild(td);
 });
 
-document.getElementById("table").appendChild(tr);
+ui.table.appendChild(tr);
 }
 
-/* ===== 下 ===== */
-function createBottom(){
+/* ===== 下名前 ===== */
+function createBottomNames(){
 const tr=document.createElement("tr");
+tr.id="bottomNamesRow";
 tr.appendChild(document.createElement("td"));
 
 players.forEach(p=>{
@@ -285,29 +298,54 @@ td.appendChild(inp);
 tr.appendChild(td);
 });
 
-document.getElementById("table").appendChild(tr);
+ui.table.appendChild(tr);
 }
 
 /* ===== 更新 ===== */
 function refreshAll(){
+
 ui.rows.forEach((r,i)=>{
+const data=rounds[i];
+
+let max=-Infinity;
+if(data.locked){
+data.scores.forEach(v=>{
+if(v!==""&&v!==NOT_JOIN){
+const n=Number(v);
+if(!isNaN(n)) max=Math.max(max,n);
+}
+});
+}
+
 r.cells.forEach((c,j)=>{
-c.inp.value=rounds[i].scores[j]||"";
+let v=data.scores[j];
+c.inp.value=(v===NOT_JOIN?"不参加":v||"");
+
+c.td.classList.toggle("lockedCell",data.locked);
+c.inp.disabled=data.locked;
+
+c.td.classList.toggle("topScore",Number(v)===max && data.locked);
 });
 });
+
 ui.chipInputs.forEach((inp,i)=>{
 inp.value=chips[i]||"";
 });
+
 updateTotals();
+controlResult();
 }
 
+/* ===== 合計計算 ===== */
 function updateTotals(){
 const totals=Array(players.length).fill(0);
 
 rounds.forEach(r=>{
 r.scores.forEach((v,i)=>{
+if(v!==""&&v!==NOT_JOIN){
 const n=Number(v);
 if(!isNaN(n)) totals[i]+=n;
+}
 });
 });
 
@@ -318,18 +356,36 @@ ui.totalCells[i].innerText=v;
 const rate=Number(localStorage.getItem("mahjongChipRate_draft")||0);
 
 totals.forEach((v,i)=>{
-const c=Number(chips[i]||0);
-ui.resultCells[i].innerText=v+c*rate;
+const chip = chips[i]==="±0"?0:Number(chips[i]||0);
+ui.resultCells[i].innerText=v + chip*rate;
 });
+}
+
+/* ===== controlResult ===== */
+function controlResult(){
+const filled=ui.chipInputs.every(inp=>inp.value!==""&&inp.value!=null);
+
+if(!filled){
+ui.resultCells.forEach(td=>td.innerText="");
+}
+}
+
+/* ===== scroll ===== */
+function scrollToBottomNames(){
+setTimeout(()=>{
+const el=document.getElementById("bottomNamesRow");
+if(el) el.scrollIntoView({block:"end"});
+},300);
 }
 
 /* ===== 操作 ===== */
 function addRound(){
 const i=rounds.length;
 rounds.push({scores:Array(players.length).fill(""),locked:false});
-addRoundDOM(i);
+createRound(i);
 updateSelect();
 save();
+refreshAll();
 }
 
 function deleteSelectedRound(){
@@ -341,13 +397,14 @@ ui.rows[i].cells[0].td.parentElement.remove();
 ui.rows.splice(i,1);
 
 updateSelect();
-updateTotals();
+refreshAll();
 save();
 }
 
 function resetRounds(){
 const i=Number(ui.select.value);
 rounds[i].scores=Array(players.length).fill("");
+rounds[i].locked=false;
 refreshAll();
 save();
 }
@@ -364,7 +421,9 @@ location.reload();
 }
 
 function updateSelect(){
-ui.select.innerHTML="";
+while(ui.select.firstChild){
+ui.select.removeChild(ui.select.firstChild);
+}
 rounds.forEach((_,i)=>{
 const op=document.createElement("option");
 op.value=i;
@@ -376,7 +435,7 @@ ui.select.appendChild(op);
 /* ===== その他 ===== */
 function goSetting(){save();location.href="player.html";}
 function goHistory(){location.href="history.html";}
-function saveHistory(){alert("履歴保存OK");}
+function saveHistory(){alert("履歴保存しました");}
 
 </script>
 </body>
