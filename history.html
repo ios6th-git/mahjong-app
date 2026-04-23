@@ -100,7 +100,13 @@ function goBack(){
 }
 
 function renderHistory(){
-  const list = JSON.parse(localStorage.getItem("mahjongHistory") || "[]");
+  let list;
+  try{
+    list = JSON.parse(localStorage.getItem("mahjongHistory") || "[]");
+  }catch(e){
+    list = [];
+  }
+
   const div = document.getElementById("history");
 
   div.innerHTML = "";
@@ -125,7 +131,13 @@ function renderHistory(){
     delBtn.onclick = () => {
       if(!confirm("この履歴を削除しますか？")) return;
 
-      let history = JSON.parse(localStorage.getItem("mahjongHistory") || "[]");
+      let history;
+      try{
+        history = JSON.parse(localStorage.getItem("mahjongHistory") || "[]");
+      }catch(e){
+        history = [];
+      }
+
       history.splice(index,1);
       localStorage.setItem("mahjongHistory", JSON.stringify(history));
 
