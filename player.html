@@ -2,28 +2,41 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>履歴</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>プレイヤー設定</title>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-
-body{
-  font-size:20px;
+html,body{
+  height:100%;
+  margin:0;
   font-family:sans-serif;
   background:#f5f5f5;
-  padding:10px;
 }
 
-.header{
+body{
   display:flex;
-  align-items:center;
+  flex-direction:column;
+  padding:10px;
+  box-sizing:border-box;
+}
+
+h2{
+  margin:6px 0 8px;
+  font-size:22px;
+}
+
+.sectionTitle{
+  margin:6px 0 8px;
+  font-size:22px;
+  font-weight:bold;
+}
+
+#topButtons{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
   margin-bottom:6px;
 }
-
-.header h2{font-size:22px;}
-
-#topRight{margin-left:auto;}
 
 button{
   font-size:20px;
@@ -36,202 +49,304 @@ button{
   box-shadow:0 2px 6px rgba(0,0,0,0.15);
 }
 
-button:active{transform:scale(0.96);}
+#playerList{
+  flex:1;
+  overflow:auto;
+}
 
-.deleteBtn{
+.row{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  margin-bottom:6px;
+  padding:6px;
+  border-radius:10px;
+  background:#fff;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+.inputBox{
+  flex:1;
+  min-width:0;
+  height:48px;
+  font-size:20px;
+  border-radius:10px;
+  border:2px solid transparent;
+  padding:6px;
+  transition:0.2s;
+}
+
+.inputBox.focused{
+  border:2px solid #4CAF50;
+  box-shadow:0 0 6px rgba(76,175,80,0.6);
+}
+
+.inputBox.locked{
+  background:#e6ffe6;
+  pointer-events:none;
+}
+
+.smallBtn{
+  width:52px;
+  height:48px;
+  font-size:14px;
+  padding:0;
+  flex-shrink:0;
+}
+
+.danger{
   background:#ffebee;
   color:#d32f2f;
-  margin-bottom:6px;
 }
 
-.historyCard{
+.checkBtn{
+  width:44px;
+  height:24px;
+  border-radius:20px;
+  background:#ddd;
+  position:relative;
+  flex-shrink:0;
+}
+
+.checkBtn::after{
+  content:"";
+  position:absolute;
+  top:2px;
+  left:2px;
+  width:20px;
+  height:20px;
   background:#fff;
-  border-radius:10px;
-  padding:6px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1);
-  margin-bottom:10px;
+  border-radius:50%;
+  transition:0.2s;
 }
 
-table{
-  width:100%;
-  table-layout:fixed;
-  border-collapse:separate;
-  border-spacing:0;
+.checkBtn.active{
+  background:#4CAF50;
 }
 
-td{
-  border-right:2px solid #000;
-  border-bottom:2px solid #000;
-  text-align:center;
-  height:60px;
+.checkBtn.active::after{
+  left:22px;
+}
+
+#chipRateInput{
+  width:33%;
+  height:48px;
   font-size:20px;
+  border-radius:10px;
+  border:2px solid transparent;
+  padding:6px;
 }
 
-tr:first-child td{border-top:2px solid #000;}
-td:first-child{border-left:2px solid #000;}
-
-.dateRow{
-  background:#fafafa;
-  font-weight:bold;
+#chipRateInput{
+  inputmode: numeric;
 }
 
-.empty{
-  text-align:center;
-  padding:40px;
+#bottomArea button{
+  width:100%;
+  margin-top:6px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">
-  <h2>履歴一覧</h2>
-  <div id="topRight">
-    <button onclick="goBack()">点数表に戻る</button>
-  </div>
+<h2>プレイヤー設定</h2>
+
+<div id="topButtons">
+  <button onclick="addPlayer()">名前追加</button>
+  <button onclick="resetChecks()">プレイヤーリセット</button>
 </div>
 
-<div id="history"></div>
+<div id="playerList"></div>
+
+<hr>
+
+<div class="sectionTitle">チップレート</div>
+
+<input type="text" id="chipRateInput" placeholder="チップレート" inputmode="numeric">
+
+<div id="bottomArea">
+  <button onclick="savePlayers()">保存</button>
+</div>
 
 <script>
 
-function goBack(){
-  window.location.href = "index.html";
+let players = [];
+let checks = [];
+let locks = [];
+let dragIndex = null;
+
+window.onload = () => {
+
+  players = JSON.parse(localStorage.getItem("mahjongPlayers_draft") || "[]");
+  checks  = JSON.parse(localStorage.getItem("mahjongPlayerChecks_draft") || "[]");
+  locks = JSON.parse(localStorage.getItem("mahjongPlayerLocks") || "[]");
+
+  if(players.length === 0){
+    players = ["","","",""];
+    checks  = [false,false,false,false];
+  }
+
+  while(checks.length < players.length){
+    checks.push(false);
+  }
+
+  while(locks.length < players.length){
+    locks.push(false);
+  }
+
+  document.getElementById("chipRateInput").value =
+    localStorage.getItem("mahjongChipRate_draft") || "";
+
+  document.getElementById("chipRateInput").placeholder = "";
+
+  renderPlayers();
+  updateRegisteredPlayers();
+};
+
+function updateRegisteredPlayers(){
+  const selected = [];
+
+  players.forEach((p,i)=>{
+    const name = (p || "").trim();
+    if(checks[i] && name !== "") selected.push(name);
+  });
+
+  localStorage.setItem("mahjongPlayers", JSON.stringify(selected));
 }
 
-function renderHistory(){
-  let list;
-  try{
-    list = JSON.parse(localStorage.getItem("mahjongHistory") || "[]");
-  }catch(e){
-    list = [];
-  }
-
-  const div = document.getElementById("history");
-
+function renderPlayers(){
+  const div = document.getElementById("playerList");
   div.innerHTML = "";
 
-  if(!Array.isArray(list) || list.length === 0){
-    const empty = document.createElement("div");
-    empty.className = "empty";
-    empty.innerText = "履歴がありません";
-    div.appendChild(empty);
-    return;
-  }
+  players.forEach((p,i)=>{
 
-  list.forEach((h, index) => {
+    const row = document.createElement("div");
+    row.className = "row";
 
-    if(!h || typeof h !== "object") return;
+    row.draggable = locks[i];
 
-    const card = document.createElement("div");
-    card.className = "historyCard";
-
-    const delBtn = document.createElement("button");
-    delBtn.innerText = "この履歴を削除";
-    delBtn.className = "deleteBtn";
-
-    delBtn.onclick = () => {
-      if(!confirm("この履歴を削除しますか？")) return;
-
-      let history;
-      try{
-        history = JSON.parse(localStorage.getItem("mahjongHistory") || "[]");
-      }catch(e){
-        history = [];
-      }
-
-      if(!Array.isArray(history)) history = [];
-
-      if(index < 0 || index >= history.length) return;
-
-      history.splice(index,1);
-      localStorage.setItem("mahjongHistory", JSON.stringify(history));
-
-      renderHistory();
+    row.ondragstart = ()=>{
+      dragIndex = i;
     };
 
-    card.appendChild(delBtn);
+    row.ondragover = (e)=>{
+      e.preventDefault();
+    };
 
-    const table = document.createElement("table");
+    row.ondrop = ()=>{
+      if(dragIndex === null || dragIndex === i) return;
 
-    const dateRow = document.createElement("tr");
-    const dateTd = document.createElement("td");
-    dateTd.colSpan = (Array.isArray(h.players) ? h.players.length : 0) + 1;
-    dateTd.innerText = h.date || "日時不明";
-    dateRow.className = "dateRow";
-    dateRow.appendChild(dateTd);
-    table.appendChild(dateRow);
+      const move = (arr)=>{
+        const item = arr.splice(dragIndex,1)[0];
+        arr.splice(i,0,item);
+      };
 
-    if(Array.isArray(h.players)){
-      const nameRow = document.createElement("tr");
+      move(players);
+      move(checks);
+      move(locks);
 
-      const blank = document.createElement("td");
-      blank.innerText = "";
-      nameRow.appendChild(blank);
+      dragIndex = null;
+      renderPlayers();
+      updateRegisteredPlayers();
+    };
 
-      h.players.forEach(p=>{
-        const td = document.createElement("td");
-        td.innerText = p;
-        nameRow.appendChild(td);
-      });
+    const inp = document.createElement("input");
+    inp.className = "inputBox" + (locks[i] ? " locked" : "");
+    inp.value = p;
+    inp.readOnly = locks[i];
 
-      table.appendChild(nameRow);
-    }
+    inp.oninput = e => {
+      players[i] = e.target.value;
+      updateRegisteredPlayers();
+    };
 
-    if(Array.isArray(h.totals)){
-      const row = document.createElement("tr");
+    const editBtn = document.createElement("button");
+    editBtn.className = "smallBtn";
+    editBtn.textContent = locks[i] ? "編集" : "確定";
 
-      const label = document.createElement("td");
-      label.innerText = "合計";
-      row.appendChild(label);
+    editBtn.onclick = ()=>{
+      locks[i] = !locks[i];
+      localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
+      renderPlayers();
+    };
 
-      h.totals.forEach(v=>{
-        const td = document.createElement("td");
-        td.innerText = v;
-        row.appendChild(td);
-      });
+    const delBtn = document.createElement("button");
+    delBtn.className = "smallBtn danger";
+    delBtn.textContent = "削除";
 
-      table.appendChild(row);
-    }
+    delBtn.onclick = ()=>{
+      if(!confirm("削除しますか？")) return;
+      players.splice(i,1);
+      checks.splice(i,1);
+      locks.splice(i,1);
 
-    if(Array.isArray(h.chips)){
-      const row = document.createElement("tr");
+      localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
 
-      const label = document.createElement("td");
-      label.innerText = "チップ";
-      row.appendChild(label);
+      updateRegisteredPlayers();
+      renderPlayers();
+    };
 
-      h.chips.forEach(v=>{
-        const td = document.createElement("td");
-        td.innerText = (v===0)?"±0":v;
-        row.appendChild(td);
-      });
+    const chkBtn = document.createElement("div");
+    chkBtn.className = "checkBtn" + (checks[i] ? " active" : "");
 
-      table.appendChild(row);
-    }
+    chkBtn.onclick = ()=>{
+      checks[i] = !checks[i];
+      updateRegisteredPlayers();
+      renderPlayers();
+    };
 
-    if(Array.isArray(h.results)){
-      const row = document.createElement("tr");
+    row.appendChild(inp);
+    row.appendChild(editBtn);
+    row.appendChild(delBtn);
+    row.appendChild(chkBtn);
 
-      const label = document.createElement("td");
-      label.innerText = "結果";
-      row.appendChild(label);
-
-      h.results.forEach(v=>{
-        const td = document.createElement("td");
-        td.innerText = v;
-        row.appendChild(td);
-      });
-
-      table.appendChild(row);
-    }
-
-    card.appendChild(table);
-    div.appendChild(card);
+    div.appendChild(row);
   });
 }
 
-window.onload = renderHistory;
+function focusLastInput(){
+  const inputs = document.querySelectorAll(".inputBox:not(.locked)");
+  if(inputs.length === 0) return;
+
+  const last = inputs[inputs.length - 1];
+
+  last.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+  last.focus();
+  last.classList.add("focused");
+
+  setTimeout(()=>{
+    last.classList.remove("focused");
+  }, 800);
+}
+
+function addPlayer(){
+  players.push("");
+  checks.push(false);
+  locks.push(false);
+
+  renderPlayers();
+  setTimeout(focusLastInput, 0);
+}
+
+function resetChecks(){
+  if(!confirm("チェックを全て外しますか？")) return;
+  checks = checks.map(()=>false);
+  updateRegisteredPlayers();
+  renderPlayers();
+}
+
+function savePlayers(){
+  localStorage.setItem("mahjongPlayers_draft", JSON.stringify(players));
+  localStorage.setItem("mahjongPlayerChecks_draft", JSON.stringify(checks));
+  localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
+
+  const rate = document.getElementById("chipRateInput").value.trim();
+  localStorage.setItem("mahjongChipRate_draft", rate);
+
+  window.location.href = "index.html";
+}
 
 </script>
 </body>
