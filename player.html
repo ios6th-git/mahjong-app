@@ -171,6 +171,15 @@ button{
 
 <script>
 
+function safeParse(key, fallback){
+  try{
+    const v = JSON.parse(localStorage.getItem(key));
+    return (v===null)?fallback:v;
+  }catch(e){
+    return fallback;
+  }
+}
+
 let players = [];
 let checks = [];
 let locks = [];
@@ -178,9 +187,13 @@ let dragIndex = null;
 
 window.onload = () => {
 
-  players = JSON.parse(localStorage.getItem("mahjongPlayers_draft") || "[]");
-  checks  = JSON.parse(localStorage.getItem("mahjongPlayerChecks_draft") || "[]");
-  locks = JSON.parse(localStorage.getItem("mahjongPlayerLocks") || "[]");
+  players = safeParse("mahjongPlayers_draft", []);
+  checks  = safeParse("mahjongPlayerChecks_draft", []);
+  locks   = safeParse("mahjongPlayerLocks", []);
+
+  if(!Array.isArray(players)) players=[];
+  if(!Array.isArray(checks)) checks=[];
+  if(!Array.isArray(locks)) locks=[];
 
   if(players.length === 0){
     players = ["","","",""];
@@ -195,6 +208,14 @@ window.onload = () => {
     locks.push(false);
   }
 
+  while(checks.length > players.length){
+    checks.pop();
+  }
+
+  while(locks.length > players.length){
+    locks.pop();
+  }
+
   document.getElementById("chipRateInput").value =
     localStorage.getItem("mahjongChipRate_draft") || "";
 
@@ -206,6 +227,8 @@ window.onload = () => {
 
 function updateRegisteredPlayers(){
   const selected = [];
+
+  if(!Array.isArray(players) || !Array.isArray(checks)) return;
 
   players.forEach((p,i)=>{
     const name = (p || "").trim();
@@ -219,7 +242,11 @@ function renderPlayers(){
   const div = document.getElementById("playerList");
   div.innerHTML = "";
 
+  if(!Array.isArray(players)) return;
+
   players.forEach((p,i)=>{
+
+    if(p === null || p === undefined) p = "";
 
     const row = document.createElement("div");
     row.className = "row";
@@ -338,6 +365,14 @@ function resetChecks(){
 }
 
 function savePlayers(){
+
+  if(!Array.isArray(players)) players=[];
+  if(!Array.isArray(checks)) checks=[];
+  if(!Array.isArray(locks)) locks=[];
+
+  while(checks.length < players.length) checks.push(false);
+  while(locks.length < players.length) locks.push(false);
+
   localStorage.setItem("mahjongPlayers_draft", JSON.stringify(players));
   localStorage.setItem("mahjongPlayerChecks_draft", JSON.stringify(checks));
   localStorage.setItem("mahjongPlayerLocks", JSON.stringify(locks));
