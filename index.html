@@ -69,58 +69,30 @@ let players=[];
 let rounds=[];
 let chips=[];
 
-function safeParse(key, fallback){
-  try{
-    const v = JSON.parse(localStorage.getItem(key));
-    return (v===null)?fallback:v;
-  }catch(e){
-    return fallback;
-  }
-}
-
 function saveState(){
 localStorage.setItem("mahjongRounds", JSON.stringify(rounds));
 localStorage.setItem("mahjongChips", JSON.stringify(chips));
 }
 
 function loadState(){
-rounds = safeParse("mahjongRounds", []);
-chips  = safeParse("mahjongChips", []);
-
-if(!Array.isArray(rounds)) rounds=[];
-if(!Array.isArray(chips)) chips=[];
+rounds = JSON.parse(localStorage.getItem("mahjongRounds")||"[]");
+chips  = JSON.parse(localStorage.getItem("mahjongChips")||"[]");
 }
 
 function loadPlayers(){
-const saved = safeParse("mahjongPlayers", []);
-players = (Array.isArray(saved) && saved.length)? saved : ["","","",""];
-
-if(chips.length !== players.length){
-chips = Array(players.length).fill("");
-}
-
+const saved = JSON.parse(localStorage.getItem("mahjongPlayers") || "[]");
+players = saved.length ? saved : ["","","",""];
+if(chips.length !== players.length){chips = Array(players.length).fill("");}
 rounds.forEach(r=>{
-if(!r || typeof r !== "object") return;
-
-if(!Array.isArray(r.scores)) r.scores = [];
-
-while(r.scores.length < players.length){
-r.scores.push(r.locked?NOT_JOIN:"");
-}
-while(r.scores.length > players.length){
-r.scores.pop();
-}
+while(r.scores.length < players.length){r.scores.push(r.locked?NOT_JOIN:"");}
+while(r.scores.length > players.length){r.scores.pop();}
 });
 }
 
 window.onload=()=>{
 loadState();
 loadPlayers();
-if(!Array.isArray(rounds) || rounds.length===0){
-addRound();
-}else{
-renderTable();
-}
+if(rounds.length===0){addRound();}else{renderTable();}
 };
 
 window.addEventListener("focus", ()=>{
@@ -132,36 +104,20 @@ function goSetting(){saveState();window.location.href="player.html";}
 function goHistory(){window.location.href="history.html";}
 
 function saveHistory(){
-
 const totals = getTotals();
 const rate = getChipRate();
-
 const chipValues = players.map((_,i)=>{
 const n = Number(chips[i]||0);
 return isNaN(n)?0:n;
 });
-
 const results = players.map((_,i)=>{
 return totals[i] + chipValues[i]*rate;
 });
-
-const data = {
-date: new Date().toLocaleString(),
-players: Array.isArray(players)? [...players] : [],
-totals: Array.isArray(totals)? totals : [],
-chips: chipValues,
-results: results
-};
-
-let history = safeParse("mahjongHistory", []);
-if(!Array.isArray(history)) history=[];
-
+const data = {date: new Date().toLocaleString(),players: [...players],totals: totals,chips: chipValues,results: results};
+let history = JSON.parse(localStorage.getItem("mahjongHistory")||"[]");
 history.push(data);
-
 if(history.length > 10){history.shift();}
-
 localStorage.setItem("mahjongHistory", JSON.stringify(history));
-
 alert("履歴保存しました");
 }
 
@@ -175,7 +131,6 @@ function deleteSelectedRound(){
 const sel = document.getElementById("roundDeleteList");
 const i = Number(sel.value);
 if(!confirm((i+1)+"行削除しますか？")) return;
-if(i<0 || i>=rounds.length) return;
 rounds.splice(i,1);
 saveState();
 renderTable();
@@ -185,7 +140,6 @@ function resetRounds(){
 const sel = document.getElementById("roundDeleteList");
 const i = Number(sel.value);
 if(!confirm("行リセットしますか？")) return;
-if(!rounds[i]) return;
 rounds[i].scores=Array(players.length).fill("");
 rounds[i].locked=false;
 saveState();
@@ -214,22 +168,17 @@ renderTable();
 
 function handleAutoFill(ri,i){
 const r=rounds[ri];
-if(!r || r.locked) return;
-
+if(r.locked) return;
 const nums=r.scores.map(v=>{
 if(v===""||v===NOT_JOIN) return null;
 const n=Number(v);
 return isNaN(n)?null:n;
 });
-
 const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
-
 if(filled.length===3 && r.scores[i]===""){
 const sum=filled.reduce((a,j)=>a+nums[j],0);
 r.scores[i]=-sum;
-for(let k=0;k<players.length;k++){
-if(r.scores[k]==="") r.scores[k]=NOT_JOIN;
-}
+for(let k=0;k<players.length;k++){if(r.scores[k]==="") r.scores[k]=NOT_JOIN;}
 r.locked=true;
 saveState();
 renderTable();
@@ -242,14 +191,8 @@ if(v==="") return null;
 const n=Number(v);
 return isNaN(n)?null:n;
 });
-
 const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
-
-if(
-  filled.length===players.length-1 &&
-  chips[i]==="" &&
-  nums.filter(v=>v===null).length===1
-){
+if(i === players.length - 1 && filled.length===players.length-1 && chips[i]===""){
 const sum=filled.reduce((a,j)=>a+nums[j],0);
 const val=-sum;
 chips[i]=val;
@@ -260,10 +203,7 @@ renderTable();
 
 function getTotals(){
 const totals=Array(players.length).fill(0);
-
 rounds.forEach(r=>{
-if(!r || !Array.isArray(r.scores)) return;
-
 players.forEach((_,i)=>{
 const v=r.scores[i];
 if(v!==""&&v!==NOT_JOIN){
@@ -272,17 +212,12 @@ if(!isNaN(n)) totals[i]+=n;
 }
 });
 });
-
 return totals;
 }
 
 function getChipRate(){
-try{
 const n=Number(localStorage.getItem("mahjongChipRate_draft")||0);
 return isNaN(n)?0:n;
-}catch(e){
-return 0;
-}
 }
 
 function scrollToBottomNames(){
@@ -311,9 +246,6 @@ header.appendChild(th);
 table.appendChild(header);
 
 rounds.forEach((r,ri)=>{
-
-if(!r || !Array.isArray(r.scores)) return;
-
 const tr=document.createElement("tr");
 tr.appendChild(Object.assign(document.createElement("td"),{innerText:ri+1}));
 
@@ -330,7 +262,6 @@ if(!isNaN(n)) max=Math.max(max,n);
 players.forEach((_,i)=>{
 const td=document.createElement("td");
 const inp=document.createElement("input");
-
 inp.value=(r.scores[i]===NOT_JOIN?"不参加":r.scores[i]);
 inp.setAttribute("inputmode","numeric");
 
@@ -351,7 +282,6 @@ saveState();
 td.appendChild(inp);
 tr.appendChild(td);
 });
-
 table.appendChild(tr);
 });
 
@@ -360,7 +290,6 @@ const rate=getChipRate();
 
 const tr=document.createElement("tr");
 tr.appendChild(Object.assign(document.createElement("td"),{innerText:"合計"}));
-
 totals.forEach(v=>{
 const td=document.createElement("td");
 td.innerText=v;
@@ -396,6 +325,7 @@ const chip = Number(chips[i]||0);
 td.innerText = totals[i] + chip*rate;
 resultRow.appendChild(td);
 });
+
 table.appendChild(resultRow);
 
 const bottomRow=document.createElement("tr");
