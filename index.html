@@ -303,7 +303,7 @@ chipRow.appendChild(Object.assign(document.createElement("td"),{innerText:"ãƒãƒ
 players.forEach((_,i)=>{
 const td=document.createElement("td");
 const inp=document.createElement("input");
-inp.value=chips[i]||"";
+inp.value=(chips[i]==="" ? "" : chips[i]);
 inp.setAttribute("inputmode","numeric");
 inp.onfocus=()=>{handleChipAutoFill(i);scrollToBottomNames();};
 inp.onclick=()=>{handleChipAutoFill(i);scrollToBottomNames();};
