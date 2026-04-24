@@ -319,10 +319,18 @@ table.appendChild(chipRow);
 const resultRow=document.createElement("tr");
 resultRow.appendChild(Object.assign(document.createElement("td"),{innerText:"結果"}));
 
+const isAllFilled = chips.every(v => v !== "");
+
 players.forEach((_,i)=>{
 const td=document.createElement("td");
+
+if(isAllFilled){
 const chip = Number(chips[i]||0);
 td.innerText = totals[i] + chip*rate;
+}else{
+td.innerText = "";
+}
+
 resultRow.appendChild(td);
 });
 
