@@ -245,7 +245,11 @@ return isNaN(n)?null:n;
 
 const filled=nums.map((v,i)=>v!==null?i:-1).filter(i=>i!==-1);
 
-if(filled.length===players.length-1 && chips[i]===""){
+if(
+  filled.length===players.length-1 &&
+  chips[i]==="" &&
+  nums.filter(v=>v===null).length===1
+){
 const sum=filled.reduce((a,j)=>a+nums[j],0);
 const val=-sum;
 chips[i]=val;
